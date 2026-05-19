@@ -2,7 +2,15 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ResumeData, ActiveSection } from '../types/resume';
+import { ResumeData, ActiveSection, ResumeSettings } from '../types/resume';
+
+export const defaultSettings: ResumeSettings = {
+  paperSize: 'letter',
+  density: 'normal',
+  fontFamily: '"Times New Roman", Times, serif',
+  accentColor: '#000000',
+  showRules: true,
+};
 
 const defaultData: ResumeData = {
   contact: {
@@ -59,8 +67,13 @@ const defaultData: ResumeData = {
 
 interface ResumeStore {
   data: ResumeData;
+  settings: ResumeSettings;
   activeSection: ActiveSection;
+  expandedSections: ActiveSection[];
   setActiveSection: (s: ActiveSection) => void;
+  toggleSection: (s: ActiveSection) => void;
+  updateSettings: (partial: Partial<ResumeSettings>) => void;
+  resetSettings: () => void;
   updateContact: (contact: Partial<ResumeData['contact']>) => void;
   updateObjective: (text: string) => void;
   updateEducation: (id: string, fields: Partial<ResumeData['education'][0]>) => void;
@@ -99,8 +112,20 @@ export const useResumeStore = create<ResumeStore>()(
   persist(
     (set) => ({
       data: defaultData,
+      settings: defaultSettings,
       activeSection: 'contact',
+      expandedSections: ['contact'],
       setActiveSection: (s) => set({ activeSection: s }),
+      toggleSection: (s) =>
+        set((state) => ({
+          expandedSections: state.expandedSections.includes(s)
+            ? state.expandedSections.filter((x) => x !== s)
+            : [...state.expandedSections, s],
+          activeSection: s,
+        })),
+      updateSettings: (partial) =>
+        set((state) => ({ settings: { ...state.settings, ...partial } })),
+      resetSettings: () => set({ settings: defaultSettings }),
       updateContact: (contact) =>
         set((state) => ({ data: { ...state.data, contact: { ...state.data.contact, ...contact } } })),
       updateObjective: (text) =>

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useResumeStore } from './store/resumeStore';
-import { ActiveSection } from './types/resume';
 import dynamic from 'next/dynamic';
+import { useResumeStore } from './store/resumeStore';
+import { ActiveSection, PaperSize, Density } from './types/resume';
 
 import ContactForm from './components/form/ContactForm';
 import ObjectiveForm from './components/form/ObjectiveForm';
@@ -17,39 +17,38 @@ import ExtracurricularForm from './components/form/ExtracurricularForm';
 
 const ResumePreview = dynamic(() => import('./components/preview/ResumePreview'), { ssr: false });
 
-const NAV_ITEMS: { id: ActiveSection; label: string; icon: string }[] = [
-  { id: 'contact',        label: 'Contact',        icon: '👤' },
-  { id: 'objective',      label: 'Objective',      icon: '🎯' },
-  { id: 'education',      label: 'Education',      icon: '🎓' },
-  { id: 'skills',         label: 'Skills',         icon: '⚡' },
-  { id: 'experience',     label: 'Experience',     icon: '💼' },
-  { id: 'projects',       label: 'Projects',       icon: '🚀' },
-  { id: 'volunteer',      label: 'Volunteer',      icon: '🤝' },
-  { id: 'certifications', label: 'Certifications', icon: '📜' },
-  { id: 'extracurricular',label: 'Extracurricular',icon: '🌟' },
+const SECTIONS: { id: ActiveSection; label: string; component: React.ComponentType }[] = [
+  { id: 'contact',         label: 'Contact Information', component: ContactForm },
+  { id: 'objective',       label: 'Objective',           component: ObjectiveForm },
+  { id: 'education',       label: 'Education',           component: EducationForm },
+  { id: 'skills',          label: 'Skills',              component: SkillsForm },
+  { id: 'experience',      label: 'Work Experience',     component: ExperienceForm },
+  { id: 'projects',        label: 'Projects',            component: ProjectsForm },
+  { id: 'volunteer',       label: 'Volunteer Leadership',component: VolunteerForm },
+  { id: 'certifications',  label: 'Certifications',      component: CertificationsForm },
+  { id: 'extracurricular', label: 'Extracurricular',     component: ExtracurricularForm },
 ];
 
-function FormSection({ active }: { active: ActiveSection }) {
-  switch (active) {
-    case 'contact':         return <ContactForm />;
-    case 'objective':       return <ObjectiveForm />;
-    case 'education':       return <EducationForm />;
-    case 'skills':          return <SkillsForm />;
-    case 'experience':      return <ExperienceForm />;
-    case 'projects':        return <ProjectsForm />;
-    case 'volunteer':       return <VolunteerForm />;
-    case 'certifications':  return <CertificationsForm />;
-    case 'extracurricular': return <ExtracurricularForm />;
-    default:                return null;
-  }
-}
+const FONT_CHOICES = [
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Georgia',         value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Garamond',        value: '"EB Garamond", Garamond, serif' },
+  { label: 'Cambria',         value: 'Cambria, Georgia, serif' },
+];
+
+const ACCENT_CHOICES = ['#000000', '#1a3a6b', '#4f6ef7', '#7c5cfc', '#0f766e', '#9a2540'];
 
 export default function Home() {
-  const { data, activeSection, setActiveSection, resetData } = useResumeStore();
-  const [mobileTab, setMobileTab]   = useState<'form' | 'preview'>('form');
+  const {
+    data, settings, expandedSections, toggleSection,
+    resetData, updateSettings, resetSettings,
+  } = useResumeStore();
+
+  const [topTab, setTopTab]         = useState<'builder' | 'templates'>('builder');
   const [exporting, setExporting]   = useState<null | 'pdf' | 'docx'>(null);
   const [showReset, setShowReset]   = useState(false);
-  const [previewScale, setPreviewScale] = useState(0.72);
+  const [previewScale, setPreviewScale] = useState(0.7);
+  const [mobileTab, setMobileTab]   = useState<'edit' | 'preview'>('edit');
 
   const handleExportPDF = useCallback(async () => {
     setExporting('pdf');
@@ -67,10 +66,12 @@ export default function Home() {
     } finally { setExporting(null); }
   }, [data]);
 
-  const currentIdx = NAV_ITEMS.findIndex((n) => n.id === activeSection);
+  const fileTitle = data.contact.fullName.trim()
+    ? `${data.contact.fullName.trim()} — Resume`
+    : 'Untitled Resume';
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
 
       {/* ── CREDIT BANNER ── */}
       <div style={{
@@ -78,182 +79,236 @@ export default function Home() {
         color:'#fff', textAlign:'center', fontSize:12, fontWeight:600,
         padding:'6px 16px', letterSpacing:'0.02em', flexShrink:0,
       }}>
-        Built with <span style={{ color:'#ffb4b4' }}>♥</span> by Abdulrahman&nbsp;·&nbsp;Supervised by the Career Center
+        Built with <span style={{ color:'#ffd1d1' }}>♥</span> by Abdulrahman&nbsp;·&nbsp;Supervised by the Career Center
       </div>
 
-      {/* ── TOP HEADER ── */}
+      {/* ── HEADER ── */}
       <header style={{
         background:'var(--surface)', borderBottom:'1px solid var(--border)',
-        padding:'0 20px', height:56, display:'flex', alignItems:'center',
+        padding:'0 20px', height:58, display:'flex', alignItems:'center',
         justifyContent:'space-between', flexShrink:0, zIndex:10,
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div style={{
             width:34, height:34, borderRadius:9,
             background:'linear-gradient(135deg, var(--accent), var(--accent-2))',
-            display:'flex', alignItems:'center', justifyContent:'center', fontSize:17,
-          }}>📄</div>
+            display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:700,
+          }}>R</div>
           <div>
-            <div style={{ fontSize:15, fontWeight:700, color:'var(--text-primary)', lineHeight:1.2 }}>Resume Builder</div>
-            <div style={{ fontSize:11, color:'var(--text-muted)' }}>YU Student Template</div>
+            <div style={{ fontSize:15, fontWeight:700, lineHeight:1.2 }}>Resume Builder</div>
+            <div style={{ fontSize:11, color:'var(--text-muted)' }}>YU Career Center · Student Template</div>
           </div>
         </div>
 
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-secondary)' }}>
+          {fileTitle}
+        </div>
+
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div className="mobile-tabs" style={{
-            display:'none', background:'var(--surface-2)',
-            border:'1px solid var(--border)', borderRadius:8, padding:3, gap:3,
-          }}>
-            {(['form','preview'] as const).map((tab) => (
-              <button key={tab} onClick={() => setMobileTab(tab)} style={{
-                padding:'5px 14px', borderRadius:6, border:'none', fontSize:12,
-                fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                background: mobileTab===tab ? 'var(--accent)' : 'transparent',
-                color:       mobileTab===tab ? 'white' : 'var(--text-secondary)',
-              }}>{tab === 'form' ? 'Edit' : 'Preview'}</button>
+          <div className="mobile-tabs" style={{ display:'none', gap:4 }}>
+            {(['edit','preview'] as const).map((t) => (
+              <button key={t} className={`toptab ${mobileTab===t?'active':''}`} onClick={() => setMobileTab(t)}>
+                {t === 'edit' ? 'Edit' : 'Preview'}
+              </button>
             ))}
           </div>
-
-          <button className="btn-ghost" onClick={() => setShowReset(true)} style={{ fontSize:12, padding:'6px 12px' }}>
-            Reset
+          <button className="btn-ghost" onClick={() => setShowReset(true)}>Reset</button>
+          <button className="btn-ghost" onClick={handleExportDOCX} disabled={!!exporting}>
+            {exporting==='docx' ? 'Exporting…' : '📝 Word'}
           </button>
-          <button onClick={handleExportDOCX} disabled={!!exporting} style={{
-            background:'transparent', border:'1.5px solid var(--border)', borderRadius:8,
-            padding:'7px 14px', color:'var(--text-secondary)', fontSize:13, fontWeight:600,
-            cursor: exporting ? 'wait' : 'pointer', fontFamily:'inherit',
-            display:'flex', alignItems:'center', gap:6, transition:'all 0.2s',
-          }}>
-            {exporting==='docx' ? '⏳ Exporting…' : '📝 Word'}
-          </button>
-          <button onClick={handleExportPDF} disabled={!!exporting} className="btn-primary"
-            style={{ padding:'7px 16px', fontSize:13, display:'flex', alignItems:'center', gap:6 }}>
-            {exporting==='pdf' ? '⏳ Exporting…' : '⬇ PDF'}
+          <button className="btn-primary" onClick={handleExportPDF} disabled={!!exporting}>
+            {exporting==='pdf' ? 'Exporting…' : '⬇ PDF'}
           </button>
         </div>
       </header>
 
-      {/* ── BODY ── */}
-      <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
+      {/* ── BODY (3 columns) ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'320px 1fr 300px', flex:1, overflow:'hidden' }} className="body-grid">
 
-        {/* LEFT SIDEBAR */}
-        <aside className="sidebar" style={{
-          width:200, background:'var(--surface)', borderRight:'1px solid var(--border)',
-          flexShrink:0, overflowY:'auto', padding:'12px 8px',
+        {/* LEFT — Builder accordion */}
+        <aside className="builder-panel" style={{
+          background:'var(--surface)', borderRight:'1px solid var(--border)',
+          overflowY:'auto', display:'flex', flexDirection:'column',
         }}>
-          <div style={{ padding:'0 8px', marginBottom:8 }}>
-            <span style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', letterSpacing:'0.1em', textTransform:'uppercase' }}>
-              Sections
-            </span>
+          <div style={{ padding:'16px 16px 12px' }}>
+            <div className="toptab-group">
+              <button className={`toptab ${topTab==='builder'?'active':''}`} onClick={() => setTopTab('builder')}>Builder</button>
+              <button className={`toptab ${topTab==='templates'?'active':''}`} onClick={() => setTopTab('templates')}>Templates</button>
+            </div>
           </div>
-          {NAV_ITEMS.map((item) => (
-            <button key={item.id}
-              className={`nav-tab${activeSection===item.id?' active':''}`}
-              onClick={() => setActiveSection(item.id)}
-              style={{ width:'100%', textAlign:'left', display:'flex', alignItems:'center', gap:10, padding:'9px 12px', marginBottom:2 }}>
-              <span style={{ fontSize:15 }}>{item.icon}</span>
-              <span style={{ fontSize:13 }}>{item.label}</span>
-            </button>
-          ))}
 
-          <div style={{ borderTop:'1px solid var(--border)', margin:'12px 0', paddingTop:12 }}>
-            <div style={{ padding:'0 8px 8px', fontSize:10, fontWeight:700, color:'var(--text-muted)', letterSpacing:'0.1em', textTransform:'uppercase' }}>
-              Preview Zoom
+          {topTab === 'builder' ? (
+            <div style={{ flex:1 }}>
+              {SECTIONS.map(({ id, label, component: FormComp }) => {
+                const open = expandedSections.includes(id);
+                return (
+                  <div className="accordion-item" key={id}>
+                    <button
+                      className={`accordion-trigger${open?' active':''}`}
+                      onClick={() => toggleSection(id)}
+                      aria-expanded={open}
+                    >
+                      <span>{label}</span>
+                      <span className={`accordion-chevron${open?' open':''}`}>+</span>
+                    </button>
+                    {open && (
+                      <div className="accordion-body fade-in-up">
+                        <FormComp />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div style={{ padding:'0 8px' }}>
-              <input type="range" min={40} max={100} value={Math.round(previewScale*100)}
-                onChange={(e) => setPreviewScale(Number(e.target.value)/100)}
-                style={{ width:'100%', accentColor:'var(--accent)' }} />
-              <div style={{ fontSize:11, color:'var(--text-muted)', textAlign:'center' }}>
-                {Math.round(previewScale*100)}%
-              </div>
+          ) : (
+            <div style={{ padding:24, color:'var(--text-secondary)', fontSize:13, lineHeight:1.6 }}>
+              <div style={{ fontWeight:600, color:'var(--text-primary)', marginBottom:6 }}>YU Student Template</div>
+              <p style={{ margin:0 }}>
+                This builder currently ships only the official YU Career Center template. Additional approved templates may be added by the Career Center in future updates.
+              </p>
             </div>
-          </div>
+          )}
         </aside>
 
-        {/* CENTER FORM */}
-        <main className="form-panel" style={{
-          flex:'0 0 480px', overflowY:'auto', padding:'28px 28px', borderRight:'1px solid var(--border)',
+        {/* CENTER — Preview */}
+        <main className="preview-area" style={{
+          background:'var(--preview-bg)', overflowY:'auto',
+          display:'flex', flexDirection:'column', alignItems:'center', padding:'28px 24px',
         }}>
-          {/* Progress bar */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:28 }}>
-            <div style={{ flex:1, height:3, background:'var(--border)', borderRadius:99 }}>
-              <div style={{
-                height:'100%', borderRadius:99,
-                background:'linear-gradient(90deg, var(--accent), var(--accent-2))',
-                width:`${((currentIdx+1)/NAV_ITEMS.length)*100}%`,
-                transition:'width 0.4s ease',
-              }} />
-            </div>
-            <span style={{ fontSize:11, color:'var(--text-muted)', whiteSpace:'nowrap' }}>
-              {currentIdx+1} / {NAV_ITEMS.length}
-            </span>
-          </div>
-
-          <FormSection active={activeSection} />
-
-          {/* Prev / Next */}
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:32, paddingTop:20, borderTop:'1px solid var(--border)' }}>
-            <button className="btn-ghost" disabled={currentIdx===0}
-              onClick={() => currentIdx>0 && setActiveSection(NAV_ITEMS[currentIdx-1].id)}
-              style={{ opacity: currentIdx===0 ? 0.3 : 1 }}>
-              ← {currentIdx>0 ? NAV_ITEMS[currentIdx-1].label : 'Previous'}
-            </button>
-            <button
-              className={currentIdx===NAV_ITEMS.length-1 ? 'btn-primary' : 'btn-ghost'}
-              onClick={() => currentIdx < NAV_ITEMS.length-1 && setActiveSection(NAV_ITEMS[currentIdx+1].id)}
-              disabled={currentIdx===NAV_ITEMS.length-1}
-              style={{ opacity: currentIdx===NAV_ITEMS.length-1 ? 0.4 : 1 }}>
-              {currentIdx<NAV_ITEMS.length-1 ? `${NAV_ITEMS[currentIdx+1].label} →` : 'All Done ✓'}
-            </button>
-          </div>
-        </main>
-
-        {/* RIGHT PREVIEW */}
-        <div className="preview-panel" style={{
-          flex:1, overflowY:'auto', overflowX:'hidden',
-          background:'#23283a', display:'flex', flexDirection:'column',
-          alignItems:'center', padding:'28px 24px',
-        }}>
-          <div style={{ marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
-            <span style={{ fontSize:11, color:'var(--text-muted)', letterSpacing:'0.08em', textTransform:'uppercase', fontWeight:600 }}>
-              Live Preview
-            </span>
-            <span style={{ fontSize:10, color:'var(--text-muted)', background:'var(--surface)', padding:'2px 8px', borderRadius:20, border:'1px solid var(--border)' }}>
-              US Letter
+          <div style={{
+            fontSize:13, color:'var(--text-secondary)', marginBottom:14,
+            display:'flex', alignItems:'center', gap:8,
+          }}>
+            <span>{fileTitle}</span>
+            <span style={{
+              fontSize:10, fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase',
+              color:'var(--text-muted)', border:'1px solid var(--border)', padding:'2px 8px',
+              borderRadius:99, background:'var(--surface)',
+            }}>
+              {settings.paperSize === 'a4' ? 'A4' : 'US Letter'}
             </span>
           </div>
 
           <div style={{
             transformOrigin:'top center',
             transform:`scale(${previewScale})`,
-            boxShadow:'0 10px 80px rgba(0,0,0,0.7), 0 2px 16px rgba(0,0,0,0.5)',
-            borderRadius:2,
+            boxShadow:'0 16px 48px rgba(20,23,43,0.12), 0 2px 8px rgba(20,23,43,0.06)',
+            borderRadius:4,
             marginBottom: previewScale < 1 ? `calc((${previewScale} - 1) * 1056px)` : 0,
           }}>
-            <ResumePreview data={data} />
+            <ResumePreview data={data} settings={settings} />
           </div>
-        </div>
+        </main>
+
+        {/* RIGHT — Properties panel */}
+        <aside className="props-panel" style={{
+          background:'var(--surface)', borderLeft:'1px solid var(--border)',
+          overflowY:'auto', padding:'20px 18px',
+        }}>
+          <PropsGroup title="Paper Size">
+            <Segmented<PaperSize>
+              value={settings.paperSize}
+              options={[{ value:'letter', label:'US Letter' }, { value:'a4', label:'A4' }]}
+              onChange={(v) => updateSettings({ paperSize: v })}
+            />
+          </PropsGroup>
+
+          <PropsGroup title="Density">
+            <Segmented<Density>
+              value={settings.density}
+              options={[
+                { value:'compact', label:'Compact' },
+                { value:'normal',  label:'Normal'  },
+                { value:'roomy',   label:'Roomy'   },
+              ]}
+              onChange={(v) => updateSettings({ density: v })}
+            />
+          </PropsGroup>
+
+          <PropsGroup title="Font (Serif Only)">
+            <select
+              value={settings.fontFamily}
+              onChange={(e) => updateSettings({ fontFamily: e.target.value })}
+              style={{
+                width:'100%', padding:'8px 10px', borderRadius:8,
+                border:'1.5px solid var(--border)', background:'var(--surface)',
+                fontFamily:'inherit', fontSize:13, color:'var(--text-primary)',
+              }}>
+              {FONT_CHOICES.map((f) => (
+                <option key={f.value} value={f.value} style={{ fontFamily:f.value }}>{f.label}</option>
+              ))}
+            </select>
+          </PropsGroup>
+
+          <PropsGroup title="Section Heading Color">
+            <div className="swatch-row">
+              {ACCENT_CHOICES.map((c) => (
+                <button
+                  key={c}
+                  className={`swatch${settings.accentColor===c?' active':''}`}
+                  style={{ background:c }}
+                  onClick={() => updateSettings({ accentColor: c })}
+                  aria-label={`Set accent ${c}`}
+                />
+              ))}
+            </div>
+            <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:6 }}>
+              Black is the template default.
+            </div>
+          </PropsGroup>
+
+          <PropsGroup title="Show Horizontal Rules">
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontSize:13, color:'var(--text-secondary)' }}>
+                {settings.showRules ? 'On' : 'Off'}
+              </span>
+              <div
+                className={`toggle${settings.showRules?' on':''}`}
+                onClick={() => updateSettings({ showRules: !settings.showRules })}
+                role="switch"
+                aria-checked={settings.showRules}
+              />
+            </div>
+          </PropsGroup>
+
+          <PropsGroup title="Preview Zoom">
+            <input
+              type="range" min={40} max={100}
+              value={Math.round(previewScale*100)}
+              onChange={(e) => setPreviewScale(Number(e.target.value)/100)}
+              style={{ width:'100%', accentColor:'var(--accent)' }}
+            />
+            <div style={{ textAlign:'center', fontSize:11, color:'var(--text-muted)' }}>
+              {Math.round(previewScale*100)}%
+            </div>
+          </PropsGroup>
+
+          <button className="btn-ghost" style={{ width:'100%', marginTop:8 }} onClick={resetSettings}>
+            Reset to YU defaults
+          </button>
+        </aside>
       </div>
 
       {/* RESET MODAL */}
       {showReset && (
-        <div style={{
-          position:'fixed', inset:0, background:'rgba(0,0,0,0.75)',
-          display:'flex', alignItems:'center', justifyContent:'center', zIndex:200,
-          backdropFilter:'blur(4px)',
-        }} onClick={() => setShowReset(false)}>
-          <div style={{
-            background:'var(--surface-2)', border:'1px solid var(--border)',
-            borderRadius:16, padding:32, maxWidth:360, width:'90%', textAlign:'center',
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize:38, marginBottom:12 }}>⚠️</div>
-            <div style={{ fontSize:18, fontWeight:700, marginBottom:8, color:'var(--text-primary)' }}>Reset all data?</div>
-            <div style={{ fontSize:13, color:'var(--text-secondary)', marginBottom:24, lineHeight:1.6 }}>
+        <div onClick={() => setShowReset(false)} style={{
+          position:'fixed', inset:0, background:'rgba(20,23,43,0.45)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          zIndex:200, backdropFilter:'blur(4px)',
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background:'var(--surface)', border:'1px solid var(--border)',
+            borderRadius:14, padding:28, maxWidth:380, width:'90%', textAlign:'center',
+            boxShadow:'0 24px 64px rgba(20,23,43,0.18)',
+          }}>
+            <div style={{ fontSize:34, marginBottom:10 }}>⚠️</div>
+            <div style={{ fontSize:17, fontWeight:700, marginBottom:6 }}>Reset all data?</div>
+            <div style={{ fontSize:13, color:'var(--text-secondary)', marginBottom:22, lineHeight:1.55 }}>
               This will clear your entire resume. This action cannot be undone.
             </div>
-            <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
+            <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
               <button className="btn-ghost" onClick={() => setShowReset(false)}>Cancel</button>
-              <button className="btn-primary" style={{ background:'#ef4444' }}
+              <button className="btn-primary" style={{ background:'var(--danger)' }}
                 onClick={() => { resetData(); setShowReset(false); }}>
                 Yes, Reset
               </button>
@@ -263,23 +318,51 @@ export default function Home() {
       )}
 
       <style>{`
-        @media (max-width: 1100px) {
-          .form-panel { flex: 0 0 380px !important; }
+        @media (max-width: 1180px) {
+          .body-grid { grid-template-columns: 280px 1fr 260px !important; }
         }
-        @media (max-width: 900px) {
-          .sidebar { display: none !important; }
-          .form-panel {
-            flex: none !important; width: 100% !important;
-            border-right: none !important;
-            display: ${mobileTab==='form' ? 'block' : 'none'} !important;
-          }
-          .preview-panel {
-            display: ${mobileTab==='preview' ? 'flex' : 'none'} !important;
-            width: 100% !important;
-          }
+        @media (max-width: 980px) {
+          .body-grid { grid-template-columns: 1fr !important; }
+          .builder-panel { display: ${mobileTab==='edit' ? 'flex' : 'none'} !important; }
+          .preview-area  { display: ${mobileTab==='preview' ? 'flex' : 'none'} !important; }
+          .props-panel { display: none !important; }
           .mobile-tabs { display: flex !important; }
         }
       `}</style>
+    </div>
+  );
+}
+
+/* ── helper components ── */
+
+function PropsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{
+        fontSize:10, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase',
+        color:'var(--text-muted)', marginBottom:8,
+      }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function Segmented<T extends string>({
+  value, options, onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="segmented">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          className={value === o.value ? 'active' : ''}
+          onClick={() => onChange(o.value)}
+        >{o.label}</button>
+      ))}
     </div>
   );
 }

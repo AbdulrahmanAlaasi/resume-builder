@@ -12,6 +12,29 @@ This is a resume builder web app based on the **Al Yamamah University (YU) CV Te
 
 The top of the app shows the credit strip: "Built with ♥ by Abdulrahman · Supervised by the Career Center". It lives in `app/page.tsx` and is NOT printed on the exported resume.
 
+## UI Layout (Phase 3 — Talently-style light theme)
+
+The page is a vertical stack:
+
+1. **Credit banner** — gradient strip, "Built with ♥ by Abdulrahman · Supervised by the Career Center".
+2. **Header** — logo + brand on left, file title in the middle (auto-derived from `contact.fullName`), `Reset / Word / PDF` buttons on the right.
+3. **3-column body grid** (`320px | 1fr | 300px`):
+   - **Left: Builder panel** — `Builder` / `Templates` top tabs. Builder tab renders the 9 sections as a collapsible accordion. Multiple sections can be open at once (state in `expandedSections`).
+   - **Center: Preview area** — soft grey background, paper-sized resume card with shadow. NO formatting toolbar (template is fixed-format on purpose). File title + paper-size badge above.
+   - **Right: Properties panel** — live formatting controls bound to `settings` in the store: paper size, density, font (serif only), section-heading colour, show/hide rules, preview zoom, and a "Reset to YU defaults" button.
+
+On screens ≤ 980px the layout collapses to one column with `Edit` / `Preview` mobile tabs; the properties panel hides.
+
+### Settings model
+
+`app/types/resume.ts` defines `ResumeSettings { paperSize, density, fontFamily, accentColor, showRules }`. The store (`useResumeStore`) holds `settings` next to `data`, with `updateSettings(partial)` and `resetSettings()`. Both are persisted in localStorage.
+
+The preview accepts `settings` as a prop (defaults to YU template values if omitted) and applies them through a `buildStyles()` helper.
+
+### CSS
+
+Light theme tokens in `app/globals.css`: white surfaces, soft lavender-grey app background (`#f4f5fb`), blue→purple accent gradient kept from before. Component classes: `.form-input`, `.form-label`, `.btn-primary/ghost/danger/add`, `.section-card`, plus new `.accordion-*`, `.toptab(-group)`, `.segmented`, `.swatch`, `.toggle`.
+
 ## Resume Preview — Template Fidelity (Phase 2)
 
 `app/components/preview/ResumePreview.tsx` mirrors the approved YU CV `.docx` exactly:

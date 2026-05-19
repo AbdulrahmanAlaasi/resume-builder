@@ -75,6 +75,17 @@ export interface ResumeData {
   extracurriculars: ExtracurricularItem[];
 }
 
+export type PaperSize = 'letter' | 'a4';
+export type Density = 'compact' | 'normal' | 'roomy';
+
+export interface ResumeSettings {
+  paperSize: PaperSize;
+  density: Density;
+  fontFamily: string;
+  accentColor: string;
+  showRules: boolean;
+}
+
 export type ActiveSection =
   | 'contact'
   | 'objective'
