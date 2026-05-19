@@ -6,7 +6,11 @@
 
 This is a resume builder web app based on the **Al Yamamah University (YU) CV Template for Students**. Users fill in a step-by-step form wizard, see a live US-Letter preview, and export to PDF or DOCX. It is being prepared for integration into the YU Career Center website.
 
-**Architecture is migrating from static export → Next.js with API routes** (Phase 5) so the Career Center site can call the builder programmatically and persist resumes. `next.config.ts` no longer sets `output: 'export'`.
+## Hosting & Architecture
+
+- **Cloudflare Pages** (resu.alaasi.dev) — auto-deploys from `main`.
+- **Static export** (`output: 'export'` in `next.config.ts`). Cloudflare Pages serves the contents of `out/` as static files. No server, no API routes.
+- **Supabase** for persistence + auth (Phase 5). The browser talks to Supabase directly using the public anon key and Row Level Security policies. The Career Center's own backend can use a service-role key for staff reads.
 
 ## Career Center Banner
 
