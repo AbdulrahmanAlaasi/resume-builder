@@ -1,134 +1,38 @@
 # CLAUDE.md — Resume Builder
 
-> A comprehensive project guide for AI-assisted development.
+> Project guide for AI-assisted development. Kept in sync with the code.
 
 ## Overview
 
-This is a resume builder web app based on the **Al Yamamah University (YU) CV Template for Students**. Users fill in a step-by-step form wizard, see a live US-Letter preview, and export to PDF or DOCX. It is being prepared for integration into the YU Career Center website.
+A web app for Al Yamamah University (YU) students to build a CV that matches the **Career Center's approved template**. Users fill in form fields, see a live A4 / US-Letter preview, and export to PDF or DOCX. Being prepared for embedding into the YU Career Center website.
+
+Live: **resu.alaasi.dev** · Repo: **github.com/AbdulrahmanAlaasi/resume-builder**
 
 ## Hosting & Architecture
 
-- **Cloudflare Pages** (resu.alaasi.dev) — auto-deploys from `main`.
-- **Static export** (`output: 'export'` in `next.config.ts`). Cloudflare Pages serves the contents of `out/` as static files. No server, no API routes.
-- **Supabase** for persistence + auth (Phase 5). The browser talks to Supabase directly using the public anon key and Row Level Security policies. The Career Center's own backend can use a service-role key for staff reads.
-
-## Career Center Banner
-
-The top of the app shows the credit strip: "Built with ♥ by Abdulrahman · Supervised by the Career Center". It lives in `app/page.tsx` and is NOT printed on the exported resume.
-
-## Editing Placeholders
-
-All form-field placeholders live in **`app/lib/placeholders.ts`** as a single `FORM_PLACEHOLDERS` object. Each form imports it as `P` and uses keys like `P.contactFullName`, `P.expBullet`. To change a placeholder, edit only that file — every form input picks up the change automatically.
-
-## Logo
-
-Drop the logo image at **`public/logo.png`**. It is referenced from `app/components/layout/TopBar.tsx`. If missing, the `<img>` hides gracefully.
-
-## Theming
-
-Theme tokens live in `app/globals.css` (`:root`). Current accent colours:
-- `--accent: #ED7A26` (logo orange)
-- `--accent-2: #1f1f1f` (logo black; used as the secondary stop in gradients)
-
-Changing those two values restyles every button, focus ring, and the credit banner gradient.
-
-## File Structure (post-refactor, integration-ready)
-
-```
-app/
-├── components/
-│   ├── form/           # 9 section forms (Contact, Objective, …, Extracurricular)
-│   ├── layout/         # App-shell pieces — composed by page.tsx
-│   │   ├── CreditBanner.tsx
-│   │   ├── TopBar.tsx
-│   │   ├── BuilderPanel.tsx
-│   │   ├── PreviewArea.tsx
-│   │   ├── PropertiesPanel.tsx
-│   │   └── ResetModal.tsx
-│   ├── preview/
-│   │   └── ResumePreview.tsx   # Pure renderer — accepts data + settings as props
-│   └── ui/             # Reusable primitives
-│       ├── PropsGroup.tsx
-│       ├── Segmented.tsx
-│       └── Toggle.tsx
-├── lib/
-│   ├── constants.ts    # SECTIONS, FONT_CHOICES, ACCENT_CHOICES, DEFAULT_SETTINGS
-│   └── exportUtils.ts  # PDF & DOCX export
-├── store/
-│   └── resumeStore.ts  # Zustand store (data + settings + UI state)
-├── types/
-│   └── resume.ts       # ResumeData, ResumeSettings, ActiveSection, PaperSize, Density
-├── globals.css
-├── layout.tsx
-└── page.tsx            # Thin composition root: <CreditBanner /> <TopBar /> <body grid />
-```
-
-**Single source of truth:** `DEFAULT_SETTINGS` lives only in `lib/constants.ts` (imported by the store and the preview). The store is the single source of UI + resume state. `ResumePreview` is a pure prop-based renderer — safe to reuse server-side later for PDF generation when the API layer lands in Phase 5.
-
-## UI Layout
-
-The page is a vertical stack:
-
-1. **Credit banner** — gradient strip, "Built with ♥ by Abdulrahman · Supervised by the Career Center".
-2. **Header** — logo (`/logo.png`) + brand on left, file title in middle (auto-derived from `contact.fullName`), `Reset / Word / PDF` buttons on the right.
-3. **Body grid** — variable column template derived from which side panels are open:
-   - **Rail** (56px, always visible on desktop): one icon per section. Clicking opens the BuilderPanel showing that section's form. Clicking the active icon again closes it. State: `activeSection` + `builderPanelOpen` in store.
-   - **BuilderPanel** (340px, toggleable): shows the form for `activeSection` only — *no accordion, no scrolling stack*. Has a header with the section name + close button.
-   - **Preview area** (`1fr`): paper-sized resume on a soft grey backdrop. Auto-scales to fit the available width via `ResizeObserver` when `fitMode === 'fit'`; manual slider available when `fitMode === 'manual'`.
-   - **PropertiesPanel** (280px, toggleable): live formatting controls bound to `settings`. Has a "Hide ›" button to close.
-   - When either side panel is hidden, a "reopen" tab appears at that edge of the preview area.
-
-On screens ≤ 980px the layout collapses to one column with `Edit` / `Preview` mobile tabs; rail and properties panel hide.
-
-### Settings model
-
-`app/types/resume.ts` defines `ResumeSettings { paperSize, density, fontFamily, accentColor, showRules }`. The store (`useResumeStore`) holds `settings` next to `data`, with `updateSettings(partial)` and `resetSettings()`. Both are persisted in localStorage.
-
-The preview accepts `settings` as a prop (defaults to YU template values if omitted) and applies them through a `buildStyles()` helper.
-
-### CSS
-
-Light theme tokens in `app/globals.css`: white surfaces, soft lavender-grey app background (`#f4f5fb`), blue→purple accent gradient kept from before. Component classes: `.form-input`, `.form-label`, `.btn-primary/ghost/danger/add`, `.section-card`, plus new `.accordion-*`, `.toptab(-group)`, `.segmented`, `.swatch`, `.toggle`.
-
-## Resume Preview — Template Fidelity (Phase 2)
-
-`app/components/preview/ResumePreview.tsx` mirrors the approved YU CV `.docx` exactly:
-- Black bold UPPERCASE section headings with trailing colon (`OBJECTIVE:`, `EDUCATION:`, etc.)
-- Thin black horizontal rules separate every section
-- Two-column rows for institution/location and italic title/dates (flexbox + space-between)
-- Times New Roman, 11pt body, ~16pt name
-- LinkedIn is a real `<a href>` hyperlink; email is a `mailto:` link
-- Bracketed placeholder copy matches the template (e.g. `[Your Phone Number]`, `[Your LinkedIn Profile]`)
-
----
+- **Cloudflare Pages**, auto-deploys from `main`. The `out/` directory produced by `next build` is served as static files.
+- **Static export** (`output: 'export'` in `next.config.ts`). No server, no SSR, no API routes.
+- **Supabase** is planned for the Career Center integration (Phase 5). The browser will call Supabase directly with the public anon key + Row Level Security; the Career Center backend will use a service-role key for staff reads. **Not yet implemented** — auth model is on hold pending a conversation with Career Center IT.
 
 ## Tech Stack
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Next.js | 16 | Framework (App Router, static export only) |
-| React | 19 | UI library |
+| Next.js | 16 | App Router, static export |
+| React | 19 | UI |
 | TypeScript | 5 | Type safety |
-| Tailwind CSS | 4 | Utility-first styling (via `@tailwindcss/postcss`) |
-| Zustand | 5 | Client-side state management (with `persist` middleware → `localStorage`) |
-| html2pdf.js | 0.14 | Client-side PDF generation from DOM |
-| docx | 9.6 | DOCX (Word) file generation |
+| Tailwind CSS | 4 | Via `@tailwindcss/postcss` (no `tailwind.config` file) |
+| Zustand | 5 | State (data + settings + UI flags), persisted in localStorage |
+| html2pdf.js | 0.14 | Browser-side PDF |
+| docx | 9.6 | Browser-side DOCX |
 
-### Key Config Notes
-
-- **Static export**: `next.config.ts` sets `output: 'export'`. No SSR, no API routes, no `getServerSideProps`. Everything runs in the browser.
-- **PostCSS**: `postcss.config.mjs` uses `@tailwindcss/postcss` (Tailwind v4 approach — no `tailwind.config` file).
-- **TypeScript**: `tsconfig.json` targets `ES2017`, uses `bundler` module resolution and `react-jsx` JSX transform. Path alias `@/*` maps to the project root.
-
----
-
-## Project Structure
+## File Structure
 
 ```
 resume-builder/
 ├── app/
 │   ├── components/
-│   │   ├── form/                  # One form component per resume section
+│   │   ├── form/                   # 9 section-specific form components
 │   │   │   ├── ContactForm.tsx
 │   │   │   ├── ObjectiveForm.tsx
 │   │   │   ├── EducationForm.tsx
@@ -138,234 +42,251 @@ resume-builder/
 │   │   │   ├── VolunteerForm.tsx
 │   │   │   ├── CertificationsForm.tsx
 │   │   │   └── ExtracurricularForm.tsx
-│   │   └── preview/
-│   │       └── ResumePreview.tsx   # Live preview rendered at US Letter size
+│   │   ├── layout/                 # App-shell pieces composed by page.tsx
+│   │   │   ├── CreditBanner.tsx    # Gradient credit strip at the very top
+│   │   │   ├── TopBar.tsx          # Logo, file title, Reset/Word/PDF buttons
+│   │   │   ├── SectionNav.tsx      # FIXED left sidebar (always visible)
+│   │   │   ├── BuilderPanel.tsx    # Slide-out detail panel showing the active form
+│   │   │   ├── PreviewArea.tsx     # Center column; auto-fits the resume to width
+│   │   │   ├── PropertiesPanel.tsx # Right column; togglable, holds formatting controls
+│   │   │   └── ResetModal.tsx
+│   │   ├── preview/
+│   │   │   └── ResumePreview.tsx   # Pure renderer — data + settings via props
+│   │   └── ui/                     # Tiny reusable primitives
+│   │       ├── PropsGroup.tsx
+│   │       ├── Segmented.tsx
+│   │       └── Toggle.tsx
 │   ├── lib/
-│   │   └── exportUtils.ts         # PDF & DOCX export functions
+│   │   ├── constants.ts            # SECTIONS, FONT_CHOICES, ACCENT_CHOICES, DEFAULT_SETTINGS
+│   │   ├── exportUtils.ts          # exportToPDF + exportToDOCX
+│   │   └── placeholders.ts         # FORM_PLACEHOLDERS — every form field's placeholder text
 │   ├── store/
-│   │   └── resumeStore.ts         # Zustand store (single source of truth)
+│   │   └── resumeStore.ts          # Zustand store, persisted to localStorage
 │   ├── types/
-│   │   └── resume.ts              # All TypeScript interfaces & union types
-│   ├── globals.css                # Design system: CSS variables, component classes
-│   ├── layout.tsx                 # Root layout (metadata, font imports via CSS)
-│   └── page.tsx                   # Main (and only) page — the full app shell
-├── next.config.ts                 # Static export config
-├── postcss.config.mjs             # Tailwind v4 PostCSS plugin
+│   │   └── resume.ts               # All TypeScript types
+│   ├── globals.css                 # Design tokens + component classes
+│   ├── layout.tsx                  # Root HTML/metadata
+│   └── page.tsx                    # Thin composition root
+├── public/
+│   ├── logo.png                    # Top-bar logo (referenced as /logo.png)
+│   └── README.md
+├── next.config.ts
+├── postcss.config.mjs
 ├── tsconfig.json
 ├── package.json
-├── preview.png                    # README hero image
-└── LICENSE                        # MIT
+└── LICENSE
 ```
 
----
+`page.tsx` is intentionally small. It composes the shell and owns three pieces of cross-cutting state (preview scale, fitMode, mobileTab, exporting status, reset-modal open). All resume data and UI panel-open flags live in the Zustand store.
 
-## Architecture & Data Flow
-
-### Single Page, Three Panels
-
-The entire app lives in `app/page.tsx` with this layout:
+## UI Layout
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│  HEADER — Logo, Mobile tabs, Reset, Export Word, Export PDF       │
-├──────────┬──────────────────┬─────────────────────────────────────┤
-│ SIDEBAR  │  CENTER FORM     │  RIGHT PREVIEW                     │
-│ (200px)  │  (480px fixed)   │  (flex: 1)                         │
-│          │                  │                                     │
-│ Section  │  Active form     │  <ResumePreview />                 │
-│ nav      │  component       │  Scaled via CSS transform          │
-│          │                  │                                     │
-│ Zoom     │  Prev / Next     │  US Letter (8.5 × 11 in)           │
-│ slider   │  navigation      │                                     │
-└──────────┴──────────────────┴─────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  CreditBanner — "Built with ♥ by Abdulrahman Alaasi · Supervised by ..."  │
+├──────────────────────────────────────────────────────────────────────────┤
+│  TopBar — logo │ file title │ Reset · Word · PDF                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│ SectionNav │ BuilderPanel? │           Preview              │ Properties? │
+│  200px     │   320px       │         (auto-fit)             │   240px     │
+│  fixed     │  conditional  │                                 │ conditional │
+│  always    │  opens when   │                                 │ collapsible │
+│  visible   │  a section    │                                 │ with reopen │
+│            │  is clicked   │                                 │     tab     │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-On screens ≤ 900px, the sidebar hides and the form/preview switch to a tabbed mobile layout.
+**Panels:**
 
-### State Management (Zustand)
+- **SectionNav** (`SectionNav.tsx`, 200px) — always visible. Lists the 9 sections as buttons. Active row has an orange accent strip + glow + chevron. Clicking a section calls `selectSection(id)`, which sets `activeSection` and opens the detail panel. Clicking the currently-active section while the detail panel is open *closes* the detail panel.
+- **BuilderPanel** (`BuilderPanel.tsx`, 320px, conditional on `detailPanelOpen`) — shows the form for the active section only. Has an ✕ button that calls `closeDetailPanel()`.
+- **PreviewArea** (`PreviewArea.tsx`, fills remaining space) — paper-sized resume on a soft grey backdrop. Uses a `ResizeObserver` + `useLayoutEffect` to auto-scale the resume to the container width when `fitMode === 'fit'`. The effect's dep array includes `detailPanelOpen` and `rightPanelOpen`, so toggling either panel re-fits the preview.
+- **PropertiesPanel** (`PropertiesPanel.tsx`, 240px, conditional on `rightPanelOpen`) — live formatting controls bound to `settings`. Has a "Hide ›" button. When hidden, a vertical "‹ Properties" reopen tab appears on the right edge of the preview area.
 
-**Store**: `app/store/resumeStore.ts`
+**Mobile (≤ 980px):** layout collapses to a single column with `Edit` / `Preview` tabs in the top bar. The properties panel and reopen tabs hide.
 
-- Wraps `create<ResumeStore>()(persist(...))` from Zustand
-- `localStorage` key: `"resume-builder-data"`
-- Holds the full `ResumeData` object and `activeSection: ActiveSection`
-- Provides granular updater functions for every section and sub-item (bullets, etc.)
-- `resetData()` restores `defaultData` (all fields empty with sensible defaults)
-- ID generation: `uid()` → `Math.random().toString(36).slice(2, 9)`
+## Store (`app/store/resumeStore.ts`)
 
-**Important**: All form components read/write via `useResumeStore()` hooks directly — there is no prop drilling for data, only the preview receives `data` as a prop from `page.tsx`.
+Zustand store wrapped with `persist`. localStorage key: `"resume-builder-data"`.
 
-### Type System
+State:
+- `data: ResumeData` — the resume content (contact, objective, education[], skills[], experiences[], projects[], volunteers[], certifications[], extracurriculars[]).
+- `settings: ResumeSettings` — formatting (paperSize, density, fontFamily, accentColor, showRules).
+- `activeSection: ActiveSection` — which form is currently shown in BuilderPanel.
+- `detailPanelOpen: boolean` — whether BuilderPanel is rendered.
+- `rightPanelOpen: boolean` — whether PropertiesPanel is rendered.
 
-**File**: `app/types/resume.ts`
+Key actions:
+- `selectSection(id)` — sets active section and opens detail panel. Toggles closed if clicking the already-active section.
+- `closeDetailPanel()` · `toggleRightPanel()`.
+- `updateSettings(partial)` · `resetSettings()` (restores `DEFAULT_SETTINGS`).
+- Granular updaters/adders/removers per resume section + bullet (e.g. `addExperienceBullet(expId)`).
+- `resetData()` — restores `defaultData`.
 
-Core interfaces:
-- `ContactInfo` — fullName, phone, email, city, country, linkedin
-- `Objective` — text
-- `Education` — university, location, degree, graduationDate, relevantCoursework, awards (each entry has an `id`)
-- `Skill` — id, text
-- `Experience` — institution, institutionDesc, location, jobTitle, startDate, endDate, bullets[]
-- `Project` — institution, location, title, startDate, endDate, bullets[]
-- `VolunteerItem` — id, text
-- `Certification` — id, text
-- `ExtracurricularItem` — id, type ('club' | 'interest'), text
+All form components read/write through `useResumeStore()` hooks directly. **No prop drilling for resume data.** Only `ResumePreview` receives `data` + `settings` as props (so it can be reused server-side later for PDF generation if Phase 5 needs it).
 
-Aggregate: `ResumeData` holds all of the above.
+## Types (`app/types/resume.ts`)
 
-`ActiveSection` is a string union of the 9 section names.
+- `ContactInfo` — `fullName, phone, email, city, country, linkedin`
+- `Objective` — `text`
+- `Education` — `university, location, degree, graduationDate, relevantCoursework, awards`
+- `Skill` — `text`
+- `Experience` — `institution, institutionDesc, location, jobTitle, startDate, endDate, bullets[]`
+- `Project` — `institution, location, title, startDate, endDate, bullets[]`
+- `VolunteerItem`, `Certification` — `text`
+- `ExtracurricularItem` — `type: 'club' | 'interest', text`
 
----
+Array entries have `id: string` (random 7-char slug from `Math.random().toString(36).slice(2, 9)`).
 
-## Component Patterns
+`ResumeSettings` — `paperSize: 'letter' | 'a4'`, `density: 'compact' | 'normal' | 'roomy'`, `fontFamily: string`, `accentColor: string`, `showRules: boolean`.
 
-### Form Components (`app/components/form/`)
+`ActiveSection` — union of the 9 section ids.
 
-Every form component follows this pattern:
+## Resume Preview — Template Fidelity
 
-1. `'use client'` directive
-2. Import `useResumeStore` — destructure only needed actions
-3. Render a wrapper `<div className="fade-in-up">`
-4. Section header: `<h2>` + description `<p>`
-5. Form fields using CSS classes: `form-input`, `form-textarea`, `form-label`
-6. For array sections (education, experience, projects, skills, etc.):
-   - Each entry wrapped in `<div className="section-card">`
-   - "Remove" button with `className="btn-danger"` (hidden when only 1 item)
-   - "Add Another" button with `className="btn-add"` at the bottom
-7. For bullet-point fields (experience, projects):
-   - Each bullet has a textarea + a remove `✕` button
-   - "+ Add Bullet Point" button at the end
+`app/components/preview/ResumePreview.tsx` mirrors the approved YU CV `.docx`:
 
-### Resume Preview (`app/components/preview/ResumePreview.tsx`)
+- Black bold UPPERCASE section headings — **no trailing colon** (e.g. `OBJECTIVE`, `EDUCATION`).
+- Thin black horizontal rules between every section (controlled by `settings.showRules`).
+- Two-column rows for institution/location (bold) and italic title/dates.
+- Default Times New Roman, 11pt body, ~16pt centered name.
+- LinkedIn rendered as a real `<a href>` (URL is normalised — adds `https://` if missing).
+- Email rendered as a `mailto:` link.
+- **Sections only render when they have content.** An empty resume shows just the header (name + contact placeholders); no ghost sections.
 
-- Pure presentational component receiving `data: ResumeData` as props
-- Renders `id="resume-preview"` div (targeted by `exportToPDF`)
-- Uses inline styles in a `const s = { ... }` object at the top
-- Styled to match a traditional Times New Roman academic resume
-- Page dimensions: `8.5in × 11in`, white background with navy (`#1a3a6b`) accent
-- `Bullet` helper component for bullet points
-- Conditional rendering: sections only show if they have content
+## Form Components
 
-### Main Page (`app/page.tsx`)
+Each form follows the same pattern:
 
-- `'use client'` — the entire app is client-rendered
-- `ResumePreview` is loaded with `next/dynamic` + `{ ssr: false }` (uses `html2pdf.js` which requires DOM)
-- `NAV_ITEMS` array defines the 9 sections with id, label, and emoji icon
-- `FormSection` switch component maps `activeSection` to the correct form
-- Inline `<style>` tag for responsive breakpoints (900px, 1100px)
-- Reset modal with backdrop blur and confirmation
+1. `'use client'` directive.
+2. Import `useResumeStore` and `FORM_PLACEHOLDERS as P`.
+3. Wrap in `<div className="fade-in-up">`.
+4. A short `<p className="form-caption">` description (no big h2 — the BuilderPanel head already shows the section name).
+5. Inputs use `.form-input`, `.form-textarea`, `.form-label`.
+6. Multi-entry sections wrap each entry in `<div className="section-card">` with a `.card-head` and "Remove" button (hidden when only 1 entry).
+7. Bullet-list sections use `.bullet-row` + `.bullet-dot`.
+8. "Add another …" button uses `.btn-add`.
 
----
+## Editing Placeholders
 
-## Export System
+All placeholder text for every form field lives in **`app/lib/placeholders.ts`** as a single `FORM_PLACEHOLDERS` object. Each form imports it as `P` and uses keys like `P.contactFullName`, `P.expBullet`. Edit one file to change them everywhere.
 
-### PDF Export (`exportToPDF`)
+## Logo
 
-- Grabs `#resume-preview` from the DOM
-- Dynamically imports `html2pdf.js` (client-only)
-- Renders at 2× scale JPEG quality 0.98
-- US Letter format, portrait orientation
-- Output filename: `resume.pdf`
+The top bar references `/logo.png`. Drop the logo image at `public/logo.png` — Cloudflare Pages serves it at the site root. If missing, the `<img>` hides itself gracefully via an `onError` handler.
 
-### DOCX Export (`exportToDOCX`)
+## Theming
 
-- Receives `ResumeData` directly (not from DOM)
-- Dynamically imports `docx` library
-- Programmatically builds Word document with:
-  - `Document`, `Paragraph`, `TextRun` objects
-  - Custom bullet numbering reference (`'bullets'`)
-  - Times New Roman font, navy (`#1a3a6b`) section headers
-  - US Letter page (12240 × 15840 twips), 0.9" margins
-  - Tab stops for right-aligned dates/locations
-- Downloads as `{fullName}.docx` (or `resume.docx` if name is empty)
-
----
-
-## Design System
-
-### CSS Variables (`app/globals.css`)
+Theme tokens live in `app/globals.css` (`:root`). Current palette:
 
 ```css
---bg: #0f1117           /* Page background (dark) */
---surface: #181c27      /* Sidebar, header, cards */
---surface-2: #1e2333    /* Elevated surfaces, section cards */
---border: #2a3050       /* Border lines */
---accent: #4f6ef7       /* Primary accent (blue) */
---accent-glow: rgba(79, 110, 247, 0.15)  /* Focus rings, active states */
---accent-2: #7c5cfc     /* Secondary accent (purple, used in gradients) */
---text-primary: #e8ecf5  /* Main text */
---text-secondary: #8b93b0  /* Descriptions, labels */
---text-muted: #555f7a   /* Placeholder, de-emphasized text */
---success: #2dd4a4      /* Success green (available but unused) */
+--bg:           #f4f5fb;   /* soft lavender-grey page background */
+--surface:      #ffffff;   /* white panels */
+--surface-2:    #f8f9fc;
+--surface-soft: #eef0f7;
+--border:       #e6e8f0;
+--accent:       #ED7A26;   /* logo orange — primary */
+--accent-2:     #1f1f1f;   /* logo black — gradient secondary */
+--accent-glow:  rgba(237, 122, 38, 0.14);
+--text-primary:   #14172b;
+--text-secondary: #5d6580;
+--text-muted:     #9ba3b8;
+--preview-bg:     #ecedf2;
 ```
 
-### Reusable CSS Classes
+Changing `--accent` + `--accent-2` re-skins every button, focus ring, accordion accent strip, and the credit banner gradient.
+
+**App UI font:** Inter. **Resume preview font:** Times New Roman by default (settable via the Font dropdown to Georgia, Garamond, or Cambria — all serif).
+
+## Reusable CSS Classes (`globals.css`)
 
 | Class | Usage |
 |-------|-------|
-| `.form-input` | Text inputs — dark bg, accent focus ring |
-| `.form-textarea` | Multi-line inputs — same style, resizable |
-| `.form-label` | Small uppercase labels |
-| `.btn-primary` | Accent-colored solid button |
-| `.btn-ghost` | Transparent bordered button |
-| `.btn-danger` | Red danger/remove button |
-| `.btn-add` | Dashed-border "add" button |
-| `.nav-tab` / `.nav-tab.active` | Sidebar navigation tabs |
-| `.section-card` | Card wrapper for repeated items |
-| `.fade-in-up` | Entry animation (translateY + opacity) |
+| `.form-input` / `.form-textarea` / `.form-label` | Form controls |
+| `.form-caption` | Small grey description above a form |
+| `.form-grid` + `.full` | 2-column grid for paired fields; collapses to 1 col under 1100px |
+| `.btn-primary` / `.btn-ghost` / `.btn-danger` / `.btn-add` | Buttons |
+| `.icon-btn` | Square close/chevron buttons (e.g. on panel heads) |
+| `.section-card` + `.card-head` | Card wrapper for repeated entries |
+| `.bullet-row` + `.bullet-dot` | Bulleted textareas inside forms |
+| `.row-with-remove` | Single input with trailing remove button |
+| `.subhead` | Mini section heading inside a form |
+| `.section-nav-panel` + `.section-nav-head` + `.section-nav-list` + `.section-nav-btn` + `.section-nav-chevron` | Left sidebar |
+| `.builder-panel-head` + `.builder-panel-title` + `.builder-panel-body` | Detail panel chrome |
+| `.panel-head` + `.panel-head-title` + `.panel-collapse-btn` | Properties panel chrome |
+| `.toptab-group` + `.toptab` | Pill tab group (mobile Edit/Preview) |
+| `.segmented` | Segmented control (paper size, density, fit/manual zoom) |
+| `.swatch-row` + `.swatch` | Colour swatches |
+| `.toggle` + `.toggle.on` | Switch |
+| `.reopen-tab.right` / `.reopen-tab.left` | Floating reopen tab when a side panel is hidden |
+| `.fade-in-up` | Entry animation |
 
-### Typography
+## Export System
 
-- **App UI**: DM Sans (imported from Google Fonts in `globals.css`)
-- **Resume Preview**: Times New Roman (system font, for academic look)
-- **Decorative** (unused import): Playfair Display
+### PDF (`exportToPDF`)
 
----
+- Targets `#resume-preview` in the DOM.
+- Dynamically imports `html2pdf.js`.
+- Renders at 2× scale, JPEG quality 0.98, US Letter portrait.
+- Filename: `resume.pdf`.
 
-## Development Commands
+### DOCX (`exportToDOCX(data, settings)`)
+
+- Accepts both resume data and current settings.
+- Section headings written with `color: toDocxHex(settings.accentColor)` — pure black when black is selected (fixes the prior navy bug).
+- Thin black `BorderStyle.SINGLE` paragraph borders for the horizontal rules (toggled by `settings.showRules`).
+- LinkedIn and email rendered as real `ExternalHyperlink` runs (normalised URL).
+- Tab-stop rows for institution/location and italic title/dates (mirrors the preview's two-column layout).
+- Falls back to `DEFAULT_SETTINGS` if called without a settings argument.
+- Sections with no content are skipped — matches preview behaviour.
+- Filename: `{fullName}.docx`, or `resume.docx` if name is empty.
+
+## Development
 
 ```bash
-npm run dev    # Start dev server (localhost:3000)
-npm run build  # Build static export to /out
-npm run start  # Start production server (rarely used — static export)
+npm run dev    # localhost:3000 with hot reload
+npm run build  # produces out/ for Cloudflare Pages
 ```
-
----
 
 ## Important Conventions
 
-1. **All components use `'use client'`** — the app is entirely client-side.
-2. **Inline styles are preferred** for layout and one-off styling in `page.tsx` and `ResumePreview.tsx`. CSS classes from `globals.css` are used for reusable interactive elements (inputs, buttons, nav).
-3. **No prop drilling for data** — form components pull from the Zustand store directly. Only `ResumePreview` receives data as a prop (from `page.tsx`).
-4. **Dynamic imports** are used for:
-   - `ResumePreview` (SSR-incompatible due to DOM measurement)
-   - `html2pdf.js` (browser-only)
-   - `docx` (heavy library, code-split)
-5. **No routing** — single page app. `app/page.tsx` is the only route.
-6. **No environment variables** needed — fully offline-capable.
-7. **`localStorage` persistence** — resume data survives page refreshes via Zustand `persist` middleware.
-
----
-
-## Known Limitations & Future Improvement Areas
-
-- **No multi-page PDF support**: The preview is a single `div`; very long resumes may clip at one page in PDF export.
-- **No theme/template switching**: Currently locked to the YU template design.
-- **No print-specific CSS**: PDF relies on `html2pdf.js` screenshot approach rather than `@media print`.
-- **No form validation**: Inputs are free-text with no required field enforcement.
-- **No drag-and-drop reordering** of entries within sections.
-- **No import from JSON/LinkedIn**: Users must manually fill all fields.
-- **Preview zoom** only supports 40–100% range.
-- **No undo/redo** history.
-- **No i18n** — English only, though the template is tailored for Saudi/GCC students.
-
----
+1. **All components are `'use client'`.** The app is entirely client-side because of the static export.
+2. **Inline styles are preferred** for layout in `page.tsx` and the layout components. CSS classes from `globals.css` are used for reusable interactive elements.
+3. **No prop drilling for resume data.** Form components read/write the store directly. Only `ResumePreview` takes data + settings as props.
+4. **Dynamic imports** for: `ResumePreview` (`{ ssr: false }`), `html2pdf.js`, and `docx` — keeps the initial bundle small.
+5. **Single-page app.** `app/page.tsx` is the only route.
+6. **`localStorage` persistence** via Zustand `persist` — resume data survives page refreshes.
+7. **Section headings carry no trailing colon** — both in preview and DOCX export.
 
 ## Adding a New Resume Section
 
-1. Add a new interface in `app/types/resume.ts` and add the field to `ResumeData`.
-2. Add the section key to the `ActiveSection` union type.
-3. Add default data in `resumeStore.ts` (`defaultData`) and create updater/add/remove actions in the store interface + implementation.
-4. Create a new form component in `app/components/form/` following the existing pattern.
-5. Add the section to `NAV_ITEMS` in `page.tsx` and add a case to the `FormSection` switch.
-6. Add rendering logic to `ResumePreview.tsx`.
-7. Add DOCX generation logic to `exportUtils.ts` → `exportToDOCX`.
+1. Add an interface in `app/types/resume.ts` and append the field to `ResumeData`. Add the new id to the `ActiveSection` union.
+2. Add default data in `resumeStore.ts` (`defaultData`) and create updater/add/remove actions.
+3. Add the section to `SECTIONS` in `app/lib/constants.ts`.
+4. Add a new form in `app/components/form/` following the existing pattern; add placeholder copy to `app/lib/placeholders.ts`.
+5. Map the id to the new form in `FORM_BY_SECTION` inside `BuilderPanel.tsx`.
+6. Add rendering logic to `ResumePreview.tsx` (with the empty-content guard so the section is hidden when blank).
+7. Add the matching DOCX block in `exportUtils.ts`.
+
+## Known Limitations / Future Work
+
+- **No multi-page PDF.** Long resumes may clip — the preview is a single page.
+- **No template switching.** YU template only.
+- **No print-specific CSS** — PDF is a screenshot via html2pdf.js, not `@media print`.
+- **No form validation.**
+- **No drag-and-drop reordering** within sections.
+- **No import** from JSON / LinkedIn.
+- **No undo/redo.**
+- **English only.**
+- **No auth / persistence to server** — Phase 5 (Supabase) is paused pending Career Center direction.
+
+## Phase Status
+
+| Phase | Status | Notes |
+|---|---|---|
+| 1. Static-export setup + credit banner | ✅ | |
+| 2. Preview matches YU template | ✅ | Black uppercase headings (no colons), separator rules, hyperlinks |
+| 3. Light-theme UI redesign | ✅ | Fixed left section nav, slide-out detail panel, right properties panel, auto-fit preview |
+| 4. DOCX/PDF export updates | ✅ | DOCX honours accent colour, real hyperlinks, no colons |
+| 5. Supabase integration | ⏸ | Paused — waiting on Career Center auth requirements |
+| 6. Polish + integration docs | ⏳ | README + Career Center brief still to do |
