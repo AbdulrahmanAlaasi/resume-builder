@@ -62,12 +62,15 @@ interface ResumeStore {
   data: ResumeData;
   settings: ResumeSettings;
   activeSection: ActiveSection;
-  builderPanelOpen: boolean;
+  /** Whether the detail (form) panel is currently open beside the nav. */
+  detailPanelOpen: boolean;
+  /** Whether the right-side properties panel is shown. */
   rightPanelOpen: boolean;
   setActiveSection: (s: ActiveSection) => void;
-  /** Click rail icon: open panel if closed (any section), or toggle if same. */
-  selectSectionFromRail: (s: ActiveSection) => void;
-  toggleBuilderPanel: () => void;
+  /** Click in section nav: open detail with that section; clicking the
+   *  currently-open active section closes the detail panel. */
+  selectSection: (s: ActiveSection) => void;
+  closeDetailPanel: () => void;
   toggleRightPanel: () => void;
   updateSettings: (partial: Partial<ResumeSettings>) => void;
   resetSettings: () => void;
@@ -111,21 +114,20 @@ export const useResumeStore = create<ResumeStore>()(
       data: defaultData,
       settings: DEFAULT_SETTINGS,
       activeSection: 'contact',
-      builderPanelOpen: true,
+      detailPanelOpen: true,
       rightPanelOpen: true,
-      toggleBuilderPanel: () =>
-        set((state) => ({ builderPanelOpen: !state.builderPanelOpen })),
       toggleRightPanel: () =>
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
-      setActiveSection: (s) => set({ activeSection: s, builderPanelOpen: true }),
-      selectSectionFromRail: (s) =>
+      setActiveSection: (s) => set({ activeSection: s, detailPanelOpen: true }),
+      selectSection: (s) =>
         set((state) => {
-          // Clicking the active icon while the panel is open → close it.
-          if (state.builderPanelOpen && state.activeSection === s) {
-            return { builderPanelOpen: false };
+          // Clicking the active row when the detail panel is open → close it.
+          if (state.detailPanelOpen && state.activeSection === s) {
+            return { detailPanelOpen: false };
           }
-          return { activeSection: s, builderPanelOpen: true };
+          return { activeSection: s, detailPanelOpen: true };
         }),
+      closeDetailPanel: () => set({ detailPanelOpen: false }),
       updateSettings: (partial) =>
         set((state) => ({ settings: { ...state.settings, ...partial } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),

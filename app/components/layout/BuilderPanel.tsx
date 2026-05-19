@@ -3,14 +3,14 @@
 import { useResumeStore } from '../../store/resumeStore';
 import { SECTIONS } from '../../lib/constants';
 
-import ContactForm        from '../form/ContactForm';
-import ObjectiveForm      from '../form/ObjectiveForm';
-import EducationForm      from '../form/EducationForm';
-import SkillsForm         from '../form/SkillsForm';
-import ExperienceForm     from '../form/ExperienceForm';
-import ProjectsForm       from '../form/ProjectsForm';
-import VolunteerForm      from '../form/VolunteerForm';
-import CertificationsForm from '../form/CertificationsForm';
+import ContactForm         from '../form/ContactForm';
+import ObjectiveForm       from '../form/ObjectiveForm';
+import EducationForm       from '../form/EducationForm';
+import SkillsForm          from '../form/SkillsForm';
+import ExperienceForm      from '../form/ExperienceForm';
+import ProjectsForm        from '../form/ProjectsForm';
+import VolunteerForm       from '../form/VolunteerForm';
+import CertificationsForm  from '../form/CertificationsForm';
 import ExtracurricularForm from '../form/ExtracurricularForm';
 import type { ActiveSection } from '../../types/resume';
 
@@ -27,14 +27,14 @@ const FORM_BY_SECTION: Record<ActiveSection, React.ComponentType> = {
 };
 
 /**
- * Single-column builder sidebar.
- * Top: navigation list of section names — one is always active.
- * Below: the active section's form fills the rest of the column.
+ * Detail panel — slides out next to SectionNav showing the form for the
+ * active section. Closes when its X button is clicked, or when the user
+ * clicks the currently-active section in the nav.
  */
 export default function BuilderPanel() {
-  const { activeSection, setActiveSection, toggleBuilderPanel } = useResumeStore();
+  const { activeSection, closeDetailPanel } = useResumeStore();
   const FormComp  = FORM_BY_SECTION[activeSection];
-  const activeLabel = SECTIONS.find((s) => s.id === activeSection)?.label ?? '';
+  const label     = SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Section';
 
   return (
     <aside className="builder-panel" style={{
@@ -42,33 +42,19 @@ export default function BuilderPanel() {
       overflowY: 'auto', display: 'flex', flexDirection: 'column',
     }}>
       <div className="builder-panel-head">
-        <div className="builder-panel-title">Resume Sections</div>
+        <div className="builder-panel-title">{label}</div>
         <button
           type="button"
           className="icon-btn"
-          onClick={toggleBuilderPanel}
-          aria-label="Hide sections panel"
-          title="Hide panel"
+          onClick={closeDetailPanel}
+          aria-label="Close detail panel"
+          title="Close"
         >
-          ‹
+          ✕
         </button>
       </div>
 
-      <nav className="section-nav">
-        {SECTIONS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            className={`section-nav-btn${activeSection === id ? ' active' : ''}`}
-            onClick={() => setActiveSection(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
       <div className="builder-panel-body fade-in-up" key={activeSection}>
-        <div className="builder-panel-form-title">{activeLabel}</div>
         <FormComp />
       </div>
     </aside>

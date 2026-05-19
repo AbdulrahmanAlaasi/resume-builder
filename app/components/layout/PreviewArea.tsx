@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default function PreviewArea({ fileTitle, manualScale, fitMode }: Props) {
-  const { data, settings, builderPanelOpen, rightPanelOpen } = useResumeStore();
+  const { data, settings, detailPanelOpen, rightPanelOpen } = useResumeStore();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [fitScale, setFitScale] = useState(0.85);
 
@@ -45,7 +45,7 @@ export default function PreviewArea({ fileTitle, manualScale, fitMode }: Props) 
     const ro = new ResizeObserver(recompute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fitMode, settings.paperSize, builderPanelOpen, rightPanelOpen]);
+  }, [fitMode, settings.paperSize, detailPanelOpen, rightPanelOpen]);
 
   const scale = fitMode === 'fit' ? fitScale : manualScale;
   const paper = PAPER_PX[settings.paperSize];

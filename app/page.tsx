@@ -5,23 +5,24 @@ import { useResumeStore } from './store/resumeStore';
 
 import CreditBanner     from './components/layout/CreditBanner';
 import TopBar           from './components/layout/TopBar';
+import SectionNav       from './components/layout/SectionNav';
 import BuilderPanel     from './components/layout/BuilderPanel';
 import PreviewArea      from './components/layout/PreviewArea';
 import PropertiesPanel  from './components/layout/PropertiesPanel';
 import ResetModal       from './components/layout/ResetModal';
 
 /**
- * App shell. Two-or-three column body:
- *   [ BuilderPanel? | Preview | PropertiesPanel? ]
+ * App shell. Body grid columns:
+ *   [ SectionNav (fixed) | BuilderPanel? | Preview | PropertiesPanel? ]
  *
- * Both side panels are togglable. Closing either grows the preview
- * automatically (PreviewArea uses ResizeObserver + fit-width mode).
+ * - SectionNav is always visible. Clicking a section opens the BuilderPanel.
+ * - PropertiesPanel can be hidden; the preview grows to fill the freed space.
  */
 export default function Home() {
   const {
     data, resetData,
-    builderPanelOpen, toggleBuilderPanel,
-    rightPanelOpen,   toggleRightPanel,
+    detailPanelOpen,
+    rightPanelOpen,  toggleRightPanel,
   } = useResumeStore();
 
   const [exporting, setExporting]     = useState<null | 'pdf' | 'docx'>(null);
@@ -55,9 +56,10 @@ export default function Home() {
   }, [data]);
 
   const cols = [
-    builderPanelOpen && '260px',  // builder sidebar
+    '200px',                      // section nav (fixed, never collapses)
+    detailPanelOpen && '320px',   // detail / form panel
     '1fr',                        // preview
-    rightPanelOpen   && '240px',  // properties panel
+    rightPanelOpen && '240px',    // properties panel
   ].filter(Boolean).join(' ');
 
   return (
@@ -77,15 +79,13 @@ export default function Home() {
         exporting={exporting}
       />
 
-      <div
-        className="body-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: cols,
-          flex: 1, overflow: 'hidden', position: 'relative',
-        }}
-      >
-        {builderPanelOpen && <BuilderPanel />}
+      <div className="body-grid" style={{
+        display: 'grid',
+        gridTemplateColumns: cols,
+        flex: 1, overflow: 'hidden', position: 'relative',
+      }}>
+        <SectionNav />
+        {detailPanelOpen && <BuilderPanel />}
 
         <div style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
           <PreviewArea
@@ -93,15 +93,6 @@ export default function Home() {
             manualScale={manualScale}
             fitMode={fitMode}
           />
-          {!builderPanelOpen && (
-            <button
-              type="button"
-              className="reopen-tab left"
-              onClick={toggleBuilderPanel}
-              aria-label="Show sections panel"
-              title="Show sections panel"
-            >Sections ›</button>
-          )}
           {!rightPanelOpen && (
             <button
               type="button"
@@ -131,12 +122,13 @@ export default function Home() {
 
       <style>{`
         @media (max-width: 980px) {
-          .body-grid { grid-template-columns: 1fr !important; }
-          .builder-panel  { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
-          .preview-area   { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
-          .props-panel    { display: none !important; }
-          .reopen-tab     { display: none !important; }
-          .mobile-tabs    { display: flex !important; }
+          .body-grid       { grid-template-columns: 1fr !important; }
+          .section-nav-panel { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
+          .builder-panel   { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
+          .preview-area    { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
+          .props-panel     { display: none !important; }
+          .reopen-tab      { display: none !important; }
+          .mobile-tabs     { display: flex !important; }
         }
       `}</style>
     </div>
