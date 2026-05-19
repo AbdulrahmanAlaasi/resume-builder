@@ -64,14 +64,11 @@ interface ResumeStore {
   activeSection: ActiveSection;
   /** Whether the detail (form) panel is currently open beside the nav. */
   detailPanelOpen: boolean;
-  /** Whether the right-side properties panel is shown. */
-  rightPanelOpen: boolean;
   setActiveSection: (s: ActiveSection) => void;
   /** Click in section nav: open detail with that section; clicking the
    *  currently-open active section closes the detail panel. */
   selectSection: (s: ActiveSection) => void;
   closeDetailPanel: () => void;
-  toggleRightPanel: () => void;
   updateSettings: (partial: Partial<ResumeSettings>) => void;
   resetSettings: () => void;
   updateContact: (contact: Partial<ResumeData['contact']>) => void;
@@ -115,9 +112,6 @@ export const useResumeStore = create<ResumeStore>()(
       settings: DEFAULT_SETTINGS,
       activeSection: 'contact',
       detailPanelOpen: true,
-      rightPanelOpen: true,
-      toggleRightPanel: () =>
-        set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
       setActiveSection: (s) => set({ activeSection: s, detailPanelOpen: true }),
       selectSection: (s) =>
         set((state) => {

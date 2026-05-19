@@ -45,10 +45,9 @@ resume-builder/
 │   │   ├── layout/                 # App-shell pieces composed by page.tsx
 │   │   │   ├── CreditBanner.tsx    # Gradient credit strip at the very top
 │   │   │   ├── TopBar.tsx          # Logo, file title, Reset/Word/PDF buttons
-│   │   │   ├── SectionNav.tsx      # FIXED left sidebar (always visible)
+│   │   │   ├── SectionNav.tsx      # FIXED left sidebar (sections + density + zoom)
 │   │   │   ├── BuilderPanel.tsx    # Slide-out detail panel showing the active form
-│   │   │   ├── PreviewArea.tsx     # Center column; auto-fits the resume to width
-│   │   │   ├── PropertiesPanel.tsx # Right column; togglable, holds formatting controls
+│   │   │   ├── PreviewArea.tsx     # Right column; auto-fits the resume to width
 │   │   │   └── ResetModal.tsx
 │   │   ├── preview/
 │   │   │   └── ResumePreview.tsx   # Pure renderer — data + settings via props
@@ -87,23 +86,27 @@ resume-builder/
 ├──────────────────────────────────────────────────────────────────────────┤
 │  TopBar — logo │ file title │ Reset · Word · PDF                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ SectionNav │ BuilderPanel? │           Preview              │ Properties? │
-│  200px     │   320px       │         (auto-fit)             │   240px     │
-│  fixed     │  conditional  │                                 │ conditional │
-│  always    │  opens when   │                                 │ collapsible │
-│  visible   │  a section    │                                 │ with reopen │
-│            │  is clicked   │                                 │     tab     │
+│ SectionNav │ BuilderPanel? │              Preview                         │
+│  220px     │   320px       │            (fills rest)                      │
+│  fixed     │  conditional  │                                              │
+│  always    │  opens when   │  auto-fit width via ResizeObserver,          │
+│  visible   │  a section    │  multiplied by the user zoom value.          │
+│            │  is clicked   │                                              │
+│ ┌────────┐ │               │                                              │
+│ │ footer │ │               │                                              │
+│ │density │ │                                                              │
+│ │+ zoom  │ │                                                              │
+│ └────────┘ │               │                                              │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Panels:**
 
-- **SectionNav** (`SectionNav.tsx`, 200px) — always visible. Lists the 9 sections as buttons. Active row has an orange accent strip + glow + chevron. Clicking a section calls `selectSection(id)`, which sets `activeSection` and opens the detail panel. Clicking the currently-active section while the detail panel is open *closes* the detail panel.
-- **BuilderPanel** (`BuilderPanel.tsx`, 320px, conditional on `detailPanelOpen`) — shows the form for the active section only. Has an ✕ button that calls `closeDetailPanel()`.
-- **PreviewArea** (`PreviewArea.tsx`, fills remaining space) — paper-sized resume on a soft grey backdrop. Uses a `ResizeObserver` + `useLayoutEffect` to auto-scale the resume to the container width when `fitMode === 'fit'`. The effect's dep array includes `detailPanelOpen` and `rightPanelOpen`, so toggling either panel re-fits the preview.
-- **PropertiesPanel** (`PropertiesPanel.tsx`, 240px, conditional on `rightPanelOpen`) — live formatting controls bound to `settings`. Has a "Hide ›" button. When hidden, a vertical "‹ Properties" reopen tab appears on the right edge of the preview area.
+- **SectionNav** (`SectionNav.tsx`, 220px) — always visible, never collapsible. Top: lists the 9 sections as buttons (active row has accent strip + chevron). Clicking a section calls `selectSection(id)`. Clicking the currently-active section *closes* the detail panel. Bottom (`section-nav-footer`): the only formatting controls left in the UI — a `Density` segmented (Compact/Normal/Roomy) and the `Preview Zoom` slider (40–100%).
+- **BuilderPanel** (`BuilderPanel.tsx`, 320px, conditional on `detailPanelOpen`) — shows the form for the active section only. ✕ button calls `closeDetailPanel()`.
+- **PreviewArea** (`PreviewArea.tsx`, fills remaining space) — paper-sized resume on a soft grey backdrop. Auto-fits via `ResizeObserver` + `useLayoutEffect`, then multiplies by the user `zoom` (so zoom=100% means "fill the column"). The dep array includes `detailPanelOpen`, so opening/closing the detail panel re-fits.
 
-**Mobile (≤ 980px):** layout collapses to a single column with `Edit` / `Preview` tabs in the top bar. The properties panel and reopen tabs hide.
+**Mobile (≤ 980px):** layout collapses to a single column with `Edit` / `Preview` tabs in the top bar.
 
 ## Store (`app/store/resumeStore.ts`)
 
@@ -114,11 +117,10 @@ State:
 - `settings: ResumeSettings` — formatting (paperSize, density, fontFamily, accentColor, showRules).
 - `activeSection: ActiveSection` — which form is currently shown in BuilderPanel.
 - `detailPanelOpen: boolean` — whether BuilderPanel is rendered.
-- `rightPanelOpen: boolean` — whether PropertiesPanel is rendered.
 
 Key actions:
 - `selectSection(id)` — sets active section and opens detail panel. Toggles closed if clicking the already-active section.
-- `closeDetailPanel()` · `toggleRightPanel()`.
+- `closeDetailPanel()`.
 - `updateSettings(partial)` · `resetSettings()` (restores `DEFAULT_SETTINGS`).
 - Granular updaters/adders/removers per resume section + bullet (e.g. `addExperienceBullet(expId)`).
 - `resetData()` — restores `defaultData`.

@@ -10,33 +10,35 @@ const ResumePreview = dynamic(
 );
 
 const PAPER_PX = {
-  letter: { w: 8.5 * 96, h: 11 * 96 },        // 816 × 1056
-  a4:     { w: 210 * 3.7795275591, h: 297 * 3.7795275591 }, // ~794 × 1123
+  letter: { w: 8.5 * 96, h: 11 * 96 },
+  a4:     { w: 210 * 3.7795275591, h: 297 * 3.7795275591 },
 };
 
-const PADDING_X = 24; // matches the .preview-area horizontal padding
+const PADDING_X = 24;
 
 interface Props {
   fileTitle: string;
-  manualScale: number;
-  fitMode: 'fit' | 'manual';
+  /** User zoom multiplier (40–100%). Applied on top of the auto-fit scale. */
+  zoom: number;
 }
 
-export default function PreviewArea({ fileTitle, manualScale, fitMode }: Props) {
-  const { data, settings, detailPanelOpen, rightPanelOpen } = useResumeStore();
+/**
+ * Auto-fits the resume to the container width via ResizeObserver, then
+ * multiplies by the user-controlled `zoom` value. So zoom=100% means
+ * "fill the available width"; zoom=70% means "70% of that width".
+ */
+export default function PreviewArea({ fileTitle, zoom }: Props) {
+  const { data, settings, detailPanelOpen } = useResumeStore();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [fitScale, setFitScale] = useState(0.85);
+  const [fitScale, setFitScale] = useState(0.9);
 
-  // Compute the fit scale whenever container width changes, paper size flips,
-  // or either side panel is toggled (since the column width changes).
   useLayoutEffect(() => {
-    if (fitMode !== 'fit' || !containerRef.current) return;
+    if (!containerRef.current) return;
     const el = containerRef.current;
     const paper = PAPER_PX[settings.paperSize];
 
     const recompute = () => {
       const usable = Math.max(0, el.clientWidth - PADDING_X * 2);
-      // Cap at 1.0 so we don't blow up the resume past actual size.
       const next = Math.min(1, usable / paper.w);
       setFitScale(Number(next.toFixed(3)));
     };
@@ -45,9 +47,9 @@ export default function PreviewArea({ fileTitle, manualScale, fitMode }: Props) 
     const ro = new ResizeObserver(recompute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fitMode, settings.paperSize, detailPanelOpen, rightPanelOpen]);
+  }, [settings.paperSize, detailPanelOpen]);
 
-  const scale = fitMode === 'fit' ? fitScale : manualScale;
+  const scale = fitScale * zoom;
   const paper = PAPER_PX[settings.paperSize];
 
   return (
@@ -72,12 +74,8 @@ export default function PreviewArea({ fileTitle, manualScale, fitMode }: Props) 
         }}>
           {settings.paperSize === 'a4' ? 'A4' : 'US Letter'}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-          {Math.round(scale * 100)}%
-        </span>
       </div>
 
-      {/* Reserve scaled dimensions so the scaled child doesn't overlap or leave a phantom gap. */}
       <div style={{
         width:  paper.w * scale,
         height: paper.h * scale,

@@ -3,33 +3,28 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useResumeStore } from './store/resumeStore';
 
-import CreditBanner     from './components/layout/CreditBanner';
-import TopBar           from './components/layout/TopBar';
-import SectionNav       from './components/layout/SectionNav';
-import BuilderPanel     from './components/layout/BuilderPanel';
-import PreviewArea      from './components/layout/PreviewArea';
-import PropertiesPanel  from './components/layout/PropertiesPanel';
-import ResetModal       from './components/layout/ResetModal';
+import CreditBanner from './components/layout/CreditBanner';
+import TopBar       from './components/layout/TopBar';
+import SectionNav   from './components/layout/SectionNav';
+import BuilderPanel from './components/layout/BuilderPanel';
+import PreviewArea  from './components/layout/PreviewArea';
+import ResetModal   from './components/layout/ResetModal';
 
 /**
- * App shell. Body grid columns:
- *   [ SectionNav (fixed) | BuilderPanel? | Preview | PropertiesPanel? ]
+ * App shell.
+ *   [ SectionNav (fixed) | BuilderPanel? | Preview (fills the rest) ]
  *
- * - SectionNav is always visible. Clicking a section opens the BuilderPanel.
- * - PropertiesPanel can be hidden; the preview grows to fill the freed space.
+ * The properties panel was removed at the user's request. The only
+ * remaining customisation knobs (density + zoom) now live at the bottom
+ * of the SectionNav.
  */
 export default function Home() {
-  const {
-    data, resetData,
-    detailPanelOpen,
-    rightPanelOpen,  toggleRightPanel,
-  } = useResumeStore();
+  const { data, resetData, detailPanelOpen } = useResumeStore();
 
-  const [exporting, setExporting]     = useState<null | 'pdf' | 'docx'>(null);
-  const [showReset, setShowReset]     = useState(false);
-  const [manualScale, setManualScale] = useState(0.7);
-  const [fitMode, setFitMode]         = useState<'fit' | 'manual'>('fit');
-  const [mobileTab, setMobileTab]     = useState<'edit' | 'preview'>('edit');
+  const [exporting, setExporting] = useState<null | 'pdf' | 'docx'>(null);
+  const [showReset, setShowReset] = useState(false);
+  const [zoom, setZoom]           = useState(1.0);
+  const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit');
 
   const fileTitle = useMemo(
     () => data.contact.fullName.trim()
@@ -56,10 +51,9 @@ export default function Home() {
   }, [data]);
 
   const cols = [
-    '200px',                      // section nav (fixed, never collapses)
-    detailPanelOpen && '320px',   // detail / form panel
-    '1fr',                        // preview
-    rightPanelOpen && '240px',    // properties panel
+    '220px',                      // SectionNav (fixed)
+    detailPanelOpen && '320px',   // BuilderPanel (form)
+    '1fr',                        // Preview
   ].filter(Boolean).join(' ');
 
   return (
@@ -82,36 +76,11 @@ export default function Home() {
       <div className="body-grid" style={{
         display: 'grid',
         gridTemplateColumns: cols,
-        flex: 1, overflow: 'hidden', position: 'relative',
+        flex: 1, overflow: 'hidden',
       }}>
-        <SectionNav />
+        <SectionNav zoom={zoom} onZoomChange={setZoom} />
         {detailPanelOpen && <BuilderPanel />}
-
-        <div style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
-          <PreviewArea
-            fileTitle={fileTitle}
-            manualScale={manualScale}
-            fitMode={fitMode}
-          />
-          {!rightPanelOpen && (
-            <button
-              type="button"
-              className="reopen-tab right"
-              onClick={toggleRightPanel}
-              aria-label="Show properties panel"
-              title="Show properties panel"
-            >‹ Properties</button>
-          )}
-        </div>
-
-        {rightPanelOpen && (
-          <PropertiesPanel
-            manualScale={manualScale}
-            onManualScaleChange={setManualScale}
-            fitMode={fitMode}
-            onFitModeChange={setFitMode}
-          />
-        )}
+        <PreviewArea fileTitle={fileTitle} zoom={zoom} />
       </div>
 
       <ResetModal
@@ -122,13 +91,11 @@ export default function Home() {
 
       <style>{`
         @media (max-width: 980px) {
-          .body-grid       { grid-template-columns: 1fr !important; }
-          .section-nav-panel { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
-          .builder-panel   { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
-          .preview-area    { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
-          .props-panel     { display: none !important; }
-          .reopen-tab      { display: none !important; }
-          .mobile-tabs     { display: flex !important; }
+          .body-grid          { grid-template-columns: 1fr !important; }
+          .section-nav-panel  { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
+          .builder-panel      { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
+          .preview-area       { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
+          .mobile-tabs        { display: flex !important; }
         }
       `}</style>
     </div>

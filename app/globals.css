@@ -214,6 +214,22 @@ body { margin: 0; min-height: 100vh; }
   border-radius: 0 3px 3px 0;
 }
 
+.section-nav-footer {
+  margin-top: auto;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.section-nav-footer-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
 /* ── Builder (detail) panel — slides out beside section nav ── */
 .builder-panel-head {
   display: flex;
@@ -234,26 +250,6 @@ body { margin: 0; min-height: 100vh; }
   flex: 1;
 }
 
-/* ── Properties panel head (matches builder panel) ── */
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.panel-head-title {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-.panel-collapse-btn {
-  padding: 4px 10px !important;
-  font-size: 12px !important;
-}
 
 /* ── Top-bar tabs (Builder / Templates) ── */
 .toptab-group {
@@ -371,41 +367,6 @@ body { margin: 0; min-height: 100vh; }
   background: var(--accent-glow);
 }
 
-/* Floating "reopen" tabs shown when a side panel is hidden. */
-.reopen-tab {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  z-index: 5;
-  transition: all 0.15s;
-  box-shadow: 0 2px 8px rgba(20,23,43,0.05);
-}
-.reopen-tab:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-glow);
-}
-.reopen-tab.left {
-  left: 0;
-  border-left: none;
-  border-radius: 0 8px 8px 0;
-  padding: 12px 6px;
-}
-.reopen-tab.right {
-  right: 0;
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  padding: 12px 8px;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-}
 
 /* ── Form layout primitives (used inside the accordion body) ── */
 .form-caption {
