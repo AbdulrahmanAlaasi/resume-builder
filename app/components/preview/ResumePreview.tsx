@@ -5,246 +5,291 @@ interface Props {
   data: ResumeData;
 }
 
+/**
+ * Mirror of the official YU Career Center CV template (approved).
+ * Black bold uppercase section heads with a colon, thin horizontal rules
+ * between sections, two-column rows for institution/location + title/dates,
+ * Times New Roman throughout. LinkedIn rendered as a real hyperlink.
+ */
+
+const INK = '#000';
+const RULE = '#000';
+
 const s = {
   page: {
     fontFamily: '"Times New Roman", Times, serif',
-    fontSize: '10pt',
-    color: '#1a1a2e',
-    lineHeight: 1.35,
-    padding: '0.75in 0.9in',
+    fontSize: '11pt',
+    color: INK,
+    lineHeight: 1.3,
+    padding: '0.6in 0.7in',
     background: 'white',
     minHeight: '11in',
     width: '8.5in',
+    boxSizing: 'border-box',
   } as React.CSSProperties,
+
   name: {
-    fontSize: '18pt',
+    fontSize: '16pt',
     fontWeight: 700,
     textAlign: 'center' as const,
-    marginBottom: 4,
-    color: '#0a1628',
-    letterSpacing: '-0.02em',
+    marginBottom: 2,
   },
   contactLine: {
     textAlign: 'center' as const,
-    fontSize: '9.5pt',
-    color: '#333355',
-    marginBottom: 12,
+    fontSize: '10.5pt',
+    marginBottom: 6,
   },
-  divider: {
-    borderTop: '2px solid #1a3a6b',
-    margin: '8px 0',
-  },
-  thinDivider: {
-    borderTop: '1px solid #c8d4e8',
+
+  rule: {
+    borderTop: `1px solid ${RULE}`,
     margin: '6px 0',
   },
+
   sectionHeader: {
-    fontSize: '10.5pt',
+    fontSize: '11pt',
     fontWeight: 700,
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.12em',
-    color: '#1a3a6b',
-    marginBottom: 6,
-    marginTop: 14,
-  },
-  institutionLine: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  institutionName: {
-    fontWeight: 700,
-    fontSize: '10pt',
-    textDecoration: 'underline',
-  },
-  subLine: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    fontStyle: 'italic',
-    fontSize: '9.5pt',
-    color: '#2a2a4a',
+    marginTop: 4,
     marginBottom: 4,
   },
-  bullet: {
+  sectionHeaderSub: {
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    fontSize: '11pt',
+  },
+
+  row: {
     display: 'flex',
-    gap: 6,
-    marginBottom: 3,
-    fontSize: '9.5pt',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 12,
+  } as React.CSSProperties,
+
+  leftBoldUnderline: {
+    fontWeight: 700,
+    textDecoration: 'underline',
   },
-  bulletDot: {
-    flexShrink: 0,
-    marginTop: 1,
+  rightBold: {
+    fontWeight: 700,
   },
+
+  italicLeft: { fontStyle: 'italic' as const },
+  italicRight: { fontStyle: 'italic' as const, whiteSpace: 'nowrap' as const },
+
+  bulletList: {
+    margin: '2px 0 6px 0',
+    paddingLeft: '0.35in',
+  } as React.CSSProperties,
+  bulletItem: {
+    marginBottom: 2,
+  },
+
+  link: {
+    color: INK,
+    textDecoration: 'underline',
+  } as React.CSSProperties,
 };
 
-function Bullet({ text }: { text: string }) {
-  if (!text.trim()) return null;
+function BulletList({ items }: { items: string[] }) {
+  const clean = items.map((i) => i.trim()).filter(Boolean);
+  if (clean.length === 0) return null;
   return (
-    <div style={s.bullet}>
-      <span style={s.bulletDot}>•</span>
-      <span>{text}</span>
-    </div>
+    <ul style={s.bulletList}>
+      {clean.map((t, i) => (
+        <li key={i} style={s.bulletItem}>{t}</li>
+      ))}
+    </ul>
   );
+}
+
+function normalizeLinkedIn(url: string): { href: string; label: string } | null {
+  const raw = url.trim();
+  if (!raw) return null;
+  const href = raw.startsWith('http') ? raw : `https://${raw}`;
+  // Display the URL without the protocol for a cleaner look.
+  const label = raw.replace(/^https?:\/\//, '');
+  return { href, label };
 }
 
 export default function ResumePreview({ data }: Props) {
   const { contact, objective, education, skills, experiences, projects, volunteers, certifications, extracurriculars } = data;
 
-  const hasContent = (arr: { text?: string }[]) => arr.some((i) => i.text?.trim());
-  const contactParts = [contact.phone, contact.email,
-    [contact.city, contact.country].filter(Boolean).join(', '), contact.linkedin].filter(Boolean);
+  const linkedin = normalizeLinkedIn(contact.linkedin);
+  const cityCountry = [contact.city, contact.country].filter(Boolean).join(', ');
+
+  // Build contact pieces in order: phone | email | city, country | linkedin
+  const contactNodes: React.ReactNode[] = [];
+  if (contact.phone.trim()) contactNodes.push(<span key="p">{contact.phone}</span>);
+  else contactNodes.push(<span key="p" style={{ color: '#888' }}>[Your Phone Number]</span>);
+
+  if (contact.email.trim()) contactNodes.push(<a key="e" style={s.link} href={`mailto:${contact.email}`}>{contact.email}</a>);
+  else contactNodes.push(<span key="e" style={{ color: '#888' }}>[Your Email Address]</span>);
+
+  if (cityCountry) contactNodes.push(<span key="c">{cityCountry}</span>);
+  else contactNodes.push(<span key="c" style={{ color: '#888' }}>[Your City, Country]</span>);
+
+  if (linkedin) contactNodes.push(<a key="l" style={s.link} href={linkedin.href} target="_blank" rel="noopener noreferrer">{linkedin.label}</a>);
+  else contactNodes.push(<span key="l" style={{ color: '#888' }}>[Your LinkedIn Profile]</span>);
+
+  const eduHasContent = education.some((e) => e.university.trim() || e.degree.trim());
+  const expHasContent = experiences.some((e) => e.institution.trim() || e.jobTitle.trim());
+  const projHasContent = projects.some((p) => p.institution.trim() || p.title.trim());
+  const skillsHasContent = skills.some((sk) => sk.text.trim());
+  const volunteersHasContent = volunteers.some((v) => v.text.trim());
+  const certsHasContent = certifications.some((c) => c.text.trim());
 
   const clubs = extracurriculars.filter((e) => e.type === 'club' && e.text.trim());
   const interests = extracurriculars.filter((e) => e.type === 'interest' && e.text.trim());
 
   return (
     <div id="resume-preview" style={s.page}>
-      {/* Header */}
-      <div style={s.name}>{contact.fullName || '[Your Name]'}</div>
-      <div style={s.contactLine}>
-        {contactParts.length > 0 ? contactParts.join(' | ') : '[Phone] | [Email] | [City, Country] | [LinkedIn]'}
+
+      {/* ── HEADER ── */}
+      <div style={s.name}>
+        {contact.fullName.trim() || <span style={{ color: '#888' }}>[Your Name]</span>}
       </div>
-      <div style={s.divider} />
+      <div style={s.contactLine}>
+        {contactNodes.map((node, i) => (
+          <span key={i}>
+            {node}
+            {i < contactNodes.length - 1 ? <span> | </span> : null}
+          </span>
+        ))}
+      </div>
+      <div style={s.rule} />
 
-      {/* Objective */}
-      {objective.text.trim() && (
-        <>
-          <div style={s.sectionHeader}>Objective:</div>
-          <div style={{ fontSize: '9.5pt', marginBottom: 4, lineHeight: 1.5 }}>{objective.text}</div>
-          <div style={s.thinDivider} />
-        </>
-      )}
+      {/* ── OBJECTIVE ── */}
+      <div style={s.sectionHeader}>OBJECTIVE:</div>
+      <div>
+        {objective.text.trim() || (
+          <span style={{ color: '#888' }}>
+            [Insert a brief statement about your career objective and what you hope to achieve through the co-op experience.]
+          </span>
+        )}
+      </div>
+      <div style={s.rule} />
 
-      {/* Education */}
-      {education.some((e) => e.university.trim() || e.degree.trim()) && (
-        <>
-          <div style={s.sectionHeader}>Education:</div>
-          {education.map((edu) => (
-            edu.university.trim() || edu.degree.trim() ? (
-              <div key={edu.id} style={{ marginBottom: 8 }}>
-                <div style={s.institutionLine}>
-                  <span style={{ fontWeight: 700, fontSize: '10pt' }}>{edu.university || '[University Name]'}</span>
-                  <span style={{ fontSize: '9.5pt', color: '#444' }}>{edu.location}</span>
-                </div>
-                <div style={s.subLine}>
-                  <span>{edu.degree || '[Degree Program]'}{edu.graduationDate ? ` — Expected Graduation: ${edu.graduationDate}` : ''}</span>
-                </div>
-                {edu.relevantCoursework.trim() && (
-                  <Bullet text={`Relevant Coursework: ${edu.relevantCoursework}`} />
-                )}
-                {edu.awards.trim() && <Bullet text={edu.awards} />}
-              </div>
-            ) : null
-          ))}
-          <div style={s.thinDivider} />
-        </>
-      )}
-
-      {/* Skills */}
-      {hasContent(skills) && (
-        <>
-          <div style={s.sectionHeader}>Skills:</div>
-          {skills.filter((sk) => sk.text.trim()).map((sk) => (
-            <Bullet key={sk.id} text={sk.text} />
-          ))}
-          <div style={s.thinDivider} />
-        </>
-      )}
-
-      {/* Professional & Project Experience */}
-      {(experiences.some((e) => e.institution.trim()) || projects.some((p) => p.title.trim())) && (
-        <>
-          <div style={s.sectionHeader}>Professional & Project Experience:</div>
-
-          {experiences.filter((e) => e.institution.trim()).map((exp) => (
-            <div key={exp.id} style={{ marginBottom: 10 }}>
-              <div style={s.institutionLine}>
-                <span>
-                  <span style={s.institutionName}>{exp.institution}</span>
-                  {exp.institutionDesc.trim() && (
-                    <span style={{ fontStyle: 'italic', fontSize: '9pt', fontWeight: 400 }}> ({exp.institutionDesc})</span>
-                  )}
-                </span>
-                <span style={{ fontSize: '9.5pt', color: '#444' }}>{exp.location}</span>
-              </div>
-              <div style={s.subLine}>
-                <span>{exp.jobTitle || '[Job Title]'}</span>
-                <span>{[exp.startDate, exp.endDate].filter(Boolean).join(' – ')}</span>
-              </div>
-              {exp.bullets.filter((b) => b.trim()).map((bullet, i) => (
-                <Bullet key={i} text={bullet} />
-              ))}
+      {/* ── EDUCATION ── */}
+      <div style={s.sectionHeader}>EDUCATION:</div>
+      {!eduHasContent ? (
+        <div style={{ color: '#888' }}>[Add your university, degree, and graduation date.]</div>
+      ) : (
+        education.filter((e) => e.university.trim() || e.degree.trim()).map((edu) => (
+          <div key={edu.id} style={{ marginBottom: 6 }}>
+            <div style={s.row}>
+              <span style={s.rightBold}>{edu.university || '[University Name]'}</span>
+              <span style={s.rightBold}>{edu.location || ''}</span>
             </div>
-          ))}
-
-          {projects.filter((p) => p.title.trim()).map((proj) => (
-            <div key={proj.id} style={{ marginBottom: 10 }}>
-              <div style={s.institutionLine}>
-                <span style={s.institutionName}>{proj.institution || '[Organization]'}</span>
-                <span style={{ fontSize: '9.5pt', color: '#444' }}>{proj.location}</span>
-              </div>
-              <div style={s.subLine}>
-                <span>{proj.title}</span>
-                <span>{[proj.startDate, proj.endDate].filter(Boolean).join(' – ')}</span>
-              </div>
-              {proj.bullets.filter((b) => b.trim()).map((bullet, i) => (
-                <Bullet key={i} text={bullet} />
-              ))}
+            <div style={s.row}>
+              <span style={s.italicLeft}>{edu.degree || '[Your Degree Program]'}</span>
+              <span style={s.italicRight}>
+                {edu.graduationDate ? `Expected Graduation: ${edu.graduationDate}` : ''}
+              </span>
             </div>
-          ))}
-          <div style={s.thinDivider} />
-        </>
+            <BulletList items={[
+              edu.relevantCoursework.trim() ? `Relevant Coursework: ${edu.relevantCoursework}` : '',
+              edu.awards,
+            ]} />
+          </div>
+        ))
+      )}
+      <div style={s.rule} />
+
+      {/* ── SKILLS ── */}
+      <div style={s.sectionHeader}>SKILLS:</div>
+      {skillsHasContent ? (
+        <BulletList items={skills.map((sk) => sk.text)} />
+      ) : (
+        <div style={{ color: '#888' }}>
+          [List your relevant technical and soft skills — keep this section to 3–4 bullets total.]
+        </div>
+      )}
+      <div style={s.rule} />
+
+      {/* ── PROFESSIONAL & PROJECT EXPERIENCE ── */}
+      <div style={s.sectionHeader}>PROFESSIONAL &amp; PROJECT EXPERIENCE:</div>
+
+      {!expHasContent && !projHasContent && (
+        <div style={{ color: '#888' }}>[Add at least one role or project. Three bullets per item is the minimum.]</div>
       )}
 
-      {/* Volunteer Leadership */}
-      {hasContent(volunteers) && (
-        <>
-          <div style={s.sectionHeader}>Volunteer Leadership: <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>[Optional]</span></div>
-          {volunteers.filter((v) => v.text.trim()).map((v) => (
-            <Bullet key={v.id} text={v.text} />
-          ))}
-          <div style={s.thinDivider} />
-        </>
-      )}
+      {experiences.filter((e) => e.institution.trim() || e.jobTitle.trim()).map((exp) => (
+        <div key={exp.id} style={{ marginBottom: 8 }}>
+          <div style={s.row}>
+            <span>
+              <span style={s.leftBoldUnderline}>{exp.institution || '[Name of Institution]'}</span>
+              {exp.institutionDesc.trim() && (
+                <span style={s.italicLeft}> ({exp.institutionDesc})</span>
+              )}
+            </span>
+            <span style={s.rightBold}>{exp.location || ''}</span>
+          </div>
+          <div style={s.row}>
+            <span style={s.italicLeft}>{exp.jobTitle || '[Job Title — full or part-time]'}</span>
+            <span style={s.italicRight}>
+              {[exp.startDate, exp.endDate].filter(Boolean).join(' – ')}
+            </span>
+          </div>
+          <BulletList items={exp.bullets} />
+        </div>
+      ))}
 
-      {/* Certifications */}
-      {hasContent(certifications) && (
-        <>
-          <div style={s.sectionHeader}>Certifications: <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>[If Applicable]</span></div>
-          {certifications.filter((c) => c.text.trim()).map((c) => (
-            <Bullet key={c.id} text={c.text} />
-          ))}
-          <div style={s.thinDivider} />
-        </>
-      )}
+      {projects.filter((p) => p.institution.trim() || p.title.trim()).map((proj) => (
+        <div key={proj.id} style={{ marginBottom: 8 }}>
+          <div style={s.row}>
+            <span style={s.leftBoldUnderline}>{proj.institution || '[Name of Institution]'}</span>
+            <span style={s.rightBold}>{proj.location || ''}</span>
+          </div>
+          <div style={s.row}>
+            <span style={s.italicLeft}>{proj.title || '[Project Title — part-time]'}</span>
+            <span style={s.italicRight}>
+              {[proj.startDate, proj.endDate].filter(Boolean).join(' – ')}
+            </span>
+          </div>
+          <BulletList items={proj.bullets} />
+        </div>
+      ))}
+      <div style={s.rule} />
 
-      {/* Extracurricular */}
-      {(clubs.length > 0 || interests.length > 0) && (
-        <>
-          <div style={s.sectionHeader}>Extracurricular Activities & Interests:</div>
-          {clubs.length > 0 && (
-            <div style={{ marginBottom: 4 }}>
-              <span style={{ fontWeight: 700, fontSize: '9.5pt' }}>Clubs: </span>
-              {clubs.map((c, i) => (
-                <span key={c.id} style={{ fontSize: '9.5pt' }}>
-                  {c.text}{i < clubs.length - 1 ? '; ' : ''}
-                </span>
-              ))}
-            </div>
-          )}
-          {interests.length > 0 && (
-            <div>
-              <span style={{ fontWeight: 700, fontSize: '9.5pt' }}>Interests: </span>
-              {interests.map((c, i) => (
-                <span key={c.id} style={{ fontSize: '9.5pt' }}>
-                  {c.text}{i < interests.length - 1 ? '; ' : ''}
-                </span>
-              ))}
-            </div>
-          )}
-        </>
+      {/* ── VOLUNTEER LEADERSHIP ── */}
+      <div style={s.sectionHeader}>
+        VOLUNTEER LEADERSHIP: <span style={{ fontWeight: 400, textTransform: 'none' }}>[OPTIONAL]</span>
+      </div>
+      {volunteersHasContent ? (
+        <BulletList items={volunteers.map((v) => v.text)} />
+      ) : (
+        <div style={{ color: '#888' }}>[List clubs, organizations, or volunteer work. Highlight leadership roles.]</div>
       )}
+      <div style={s.rule} />
+
+      {/* ── CERTIFICATIONS ── */}
+      <div style={s.sectionHeader}>
+        CERTIFICATIONS: <span style={{ fontWeight: 400, textTransform: 'none' }}>[IF APPLICABLE]</span>
+      </div>
+      {certsHasContent ? (
+        <BulletList items={certifications.map((c) => c.text)} />
+      ) : (
+        <div style={{ color: '#888' }}>[List relevant certifications, workshops, or online course certificates.]</div>
+      )}
+      <div style={s.rule} />
+
+      {/* ── EXTRACURRICULAR ── */}
+      <div style={s.sectionHeader}>EXTRACURRICULAR ACTIVITIES &amp; INTERESTS:</div>
+      <ul style={s.bulletList}>
+        <li style={s.bulletItem}>
+          <span style={{ fontWeight: 700 }}>Clubs:</span>{' '}
+          {clubs.length > 0
+            ? clubs.map((c) => c.text).join('; ')
+            : <span style={{ color: '#888' }}>[What clubs are you in? What&apos;s your role?]</span>}
+        </li>
+        <li style={s.bulletItem}>
+          <span style={{ fontWeight: 700 }}>Interests:</span>{' '}
+          {interests.length > 0
+            ? interests.map((i) => i.text).join('; ')
+            : <span style={{ color: '#888' }}>[What do you do with your free time that is relevant to an employer?]</span>}
+        </li>
+      </ul>
+
     </div>
   );
 }

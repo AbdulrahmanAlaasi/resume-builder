@@ -4,7 +4,23 @@
 
 ## Overview
 
-This is a **single-page, client-only resume builder** web app based on the **Al Yamamah University (YU) CV Template for Students**. Users fill in a step-by-step form wizard, see a live US-Letter preview, and export to PDF or DOCX. The app ships as a **static export** (`output: 'export'` in `next.config.ts`) — there is **no server, no API, no database**.
+This is a resume builder web app based on the **Al Yamamah University (YU) CV Template for Students**. Users fill in a step-by-step form wizard, see a live US-Letter preview, and export to PDF or DOCX. It is being prepared for integration into the YU Career Center website.
+
+**Architecture is migrating from static export → Next.js with API routes** (Phase 5) so the Career Center site can call the builder programmatically and persist resumes. `next.config.ts` no longer sets `output: 'export'`.
+
+## Career Center Banner
+
+The top of the app shows the credit strip: "Built with ♥ by Abdulrahman · Supervised by the Career Center". It lives in `app/page.tsx` and is NOT printed on the exported resume.
+
+## Resume Preview — Template Fidelity (Phase 2)
+
+`app/components/preview/ResumePreview.tsx` mirrors the approved YU CV `.docx` exactly:
+- Black bold UPPERCASE section headings with trailing colon (`OBJECTIVE:`, `EDUCATION:`, etc.)
+- Thin black horizontal rules separate every section
+- Two-column rows for institution/location and italic title/dates (flexbox + space-between)
+- Times New Roman, 11pt body, ~16pt name
+- LinkedIn is a real `<a href>` hyperlink; email is a `mailto:` link
+- Bracketed placeholder copy matches the template (e.g. `[Your Phone Number]`, `[Your LinkedIn Profile]`)
 
 ---
 
