@@ -27,14 +27,14 @@ const FORM_BY_SECTION: Record<ActiveSection, React.ComponentType> = {
 };
 
 /**
- * Slide-out builder panel — shows the form for the active section only.
- * Triggered by the BuilderRail on the left. Has its own close button.
+ * Single-column builder sidebar.
+ * Top: navigation list of section names — one is always active.
+ * Below: the active section's form fills the rest of the column.
  */
 export default function BuilderPanel() {
-  const { activeSection, toggleBuilderPanel } = useResumeStore();
+  const { activeSection, setActiveSection, toggleBuilderPanel } = useResumeStore();
   const FormComp  = FORM_BY_SECTION[activeSection];
-  const labelInfo = SECTIONS.find((s) => s.id === activeSection);
-  const label     = labelInfo?.label ?? 'Section';
+  const activeLabel = SECTIONS.find((s) => s.id === activeSection)?.label ?? '';
 
   return (
     <aside className="builder-panel" style={{
@@ -42,19 +42,33 @@ export default function BuilderPanel() {
       overflowY: 'auto', display: 'flex', flexDirection: 'column',
     }}>
       <div className="builder-panel-head">
-        <div className="builder-panel-title">{label}</div>
+        <div className="builder-panel-title">Resume Sections</div>
         <button
           type="button"
           className="icon-btn"
           onClick={toggleBuilderPanel}
-          aria-label="Hide section panel"
+          aria-label="Hide sections panel"
           title="Hide panel"
         >
           ‹
         </button>
       </div>
 
+      <nav className="section-nav">
+        {SECTIONS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            className={`section-nav-btn${activeSection === id ? ' active' : ''}`}
+            onClick={() => setActiveSection(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
       <div className="builder-panel-body fade-in-up" key={activeSection}>
+        <div className="builder-panel-form-title">{activeLabel}</div>
         <FormComp />
       </div>
     </aside>

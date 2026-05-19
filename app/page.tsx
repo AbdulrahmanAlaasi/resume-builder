@@ -5,34 +5,30 @@ import { useResumeStore } from './store/resumeStore';
 
 import CreditBanner     from './components/layout/CreditBanner';
 import TopBar           from './components/layout/TopBar';
-import BuilderRail      from './components/layout/BuilderRail';
 import BuilderPanel     from './components/layout/BuilderPanel';
 import PreviewArea      from './components/layout/PreviewArea';
 import PropertiesPanel  from './components/layout/PropertiesPanel';
 import ResetModal       from './components/layout/ResetModal';
 
 /**
- * App shell. Composition order:
- *   [ Credit banner ]
- *   [ Top bar     ]
- *   [ Rail | BuilderPanel? | Preview | PropertiesPanel? ]
+ * App shell. Two-or-three column body:
+ *   [ BuilderPanel? | Preview | PropertiesPanel? ]
  *
- * Both the BuilderPanel and the PropertiesPanel are togglable.
- * The grid template column list is derived from the open/closed flags so
- * the preview area always claims any freed horizontal space.
+ * Both side panels are togglable. Closing either grows the preview
+ * automatically (PreviewArea uses ResizeObserver + fit-width mode).
  */
 export default function Home() {
   const {
     data, resetData,
     builderPanelOpen, toggleBuilderPanel,
-    rightPanelOpen,
+    rightPanelOpen,   toggleRightPanel,
   } = useResumeStore();
 
-  const [exporting, setExporting]       = useState<null | 'pdf' | 'docx'>(null);
-  const [showReset, setShowReset]       = useState(false);
-  const [manualScale, setManualScale]   = useState(0.7);
-  const [fitMode, setFitMode]           = useState<'fit' | 'manual'>('fit');
-  const [mobileTab, setMobileTab]       = useState<'edit' | 'preview'>('edit');
+  const [exporting, setExporting]     = useState<null | 'pdf' | 'docx'>(null);
+  const [showReset, setShowReset]     = useState(false);
+  const [manualScale, setManualScale] = useState(0.7);
+  const [fitMode, setFitMode]         = useState<'fit' | 'manual'>('fit');
+  const [mobileTab, setMobileTab]     = useState<'edit' | 'preview'>('edit');
 
   const fileTitle = useMemo(
     () => data.contact.fullName.trim()
@@ -58,12 +54,10 @@ export default function Home() {
     } finally { setExporting(null); }
   }, [data]);
 
-  // Grid template — derived from which panels are open.
   const cols = [
-    '56px',                       // rail (always visible on desktop)
-    builderPanelOpen && '340px',  // builder panel
+    builderPanelOpen && '260px',  // builder sidebar
     '1fr',                        // preview
-    rightPanelOpen   && '280px',  // properties panel
+    rightPanelOpen   && '240px',  // properties panel
   ].filter(Boolean).join(' ');
 
   return (
@@ -91,7 +85,6 @@ export default function Home() {
           flex: 1, overflow: 'hidden', position: 'relative',
         }}
       >
-        <BuilderRail />
         {builderPanelOpen && <BuilderPanel />}
 
         <div style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
@@ -105,15 +98,15 @@ export default function Home() {
               type="button"
               className="reopen-tab left"
               onClick={toggleBuilderPanel}
-              aria-label="Show section panel"
-              title="Show section panel"
-            >›</button>
+              aria-label="Show sections panel"
+              title="Show sections panel"
+            >Sections ›</button>
           )}
           {!rightPanelOpen && (
             <button
               type="button"
               className="reopen-tab right"
-              onClick={() => useResumeStore.getState().toggleRightPanel()}
+              onClick={toggleRightPanel}
               aria-label="Show properties panel"
               title="Show properties panel"
             >‹ Properties</button>
@@ -139,7 +132,6 @@ export default function Home() {
       <style>{`
         @media (max-width: 980px) {
           .body-grid { grid-template-columns: 1fr !important; }
-          .builder-rail   { display: none !important; }
           .builder-panel  { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
           .preview-area   { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
           .props-panel    { display: none !important; }
