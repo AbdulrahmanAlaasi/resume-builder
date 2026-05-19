@@ -250,4 +250,4 @@ The app is a single route: `app/page.tsx`.
 | 3. Light-theme UI redesign | Done | Fixed nav, 380px detail panel, responsive tabs |
 | 4. DOCX/PDF export updates | Done | Paper size, hyperlinks, justified DOCX body text |
 | 5. Supabase integration | Paused | Waiting on Career Center auth requirements |
-| 6. Polish + integration docs | In progress | README updated; Career Center brief still to do |
+| 6. Polish + integration docs | Done | See `INTEGRATION.md` — embed-now + Supabase wiring + open decisions |
