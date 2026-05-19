@@ -11,11 +11,12 @@ import PropertiesPanel  from './components/layout/PropertiesPanel';
 import ResetModal       from './components/layout/ResetModal';
 
 /**
- * App shell: composes the credit banner, top bar, and the three-column
- * builder layout. All real work lives in the panel components.
+ * App shell. Composes credit banner, top bar, and the three-column builder layout.
+ * The right (properties) panel is togglable; when collapsed a thin reopen tab
+ * appears on the right edge of the preview area.
  */
 export default function Home() {
-  const { data, resetData } = useResumeStore();
+  const { data, resetData, rightPanelOpen, toggleRightPanel } = useResumeStore();
 
   const [exporting, setExporting]       = useState<null | 'pdf' | 'docx'>(null);
   const [showReset, setShowReset]       = useState(false);
@@ -41,9 +42,12 @@ export default function Home() {
     setExporting('docx');
     try {
       const { exportToDOCX } = await import('./lib/exportUtils');
-      await exportToDOCX(data);
+      const { settings }     = useResumeStore.getState();
+      await exportToDOCX(data, settings);
     } finally { setExporting(null); }
   }, [data]);
+
+  const gridCols = rightPanelOpen ? '380px 1fr 280px' : '380px 1fr';
 
   return (
     <div style={{
@@ -63,15 +67,29 @@ export default function Home() {
       />
 
       <div className="body-grid" style={{
-        display: 'grid', gridTemplateColumns: '320px 1fr 300px',
-        flex: 1, overflow: 'hidden',
+        display: 'grid',
+        gridTemplateColumns: gridCols,
+        flex: 1, overflow: 'hidden', position: 'relative',
       }}>
         <BuilderPanel />
-        <PreviewArea fileTitle={fileTitle} previewScale={previewScale} />
-        <PropertiesPanel
-          previewScale={previewScale}
-          onPreviewScaleChange={setPreviewScale}
-        />
+        <div style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
+          <PreviewArea fileTitle={fileTitle} previewScale={previewScale} />
+          {!rightPanelOpen && (
+            <button
+              className="reopen-tab"
+              onClick={toggleRightPanel}
+              aria-label="Open properties panel"
+              title="Open properties"
+              type="button"
+            >‹</button>
+          )}
+        </div>
+        {rightPanelOpen && (
+          <PropertiesPanel
+            previewScale={previewScale}
+            onPreviewScaleChange={setPreviewScale}
+          />
+        )}
       </div>
 
       <ResetModal
@@ -82,13 +100,16 @@ export default function Home() {
 
       <style>{`
         @media (max-width: 1180px) {
-          .body-grid { grid-template-columns: 280px 1fr 260px !important; }
+          .body-grid {
+            grid-template-columns: ${rightPanelOpen ? '320px 1fr 260px' : '320px 1fr'} !important;
+          }
         }
         @media (max-width: 980px) {
           .body-grid { grid-template-columns: 1fr !important; }
           .builder-panel { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; }
           .preview-area  { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
           .props-panel { display: none !important; }
+          .reopen-tab { display: none !important; }
           .mobile-tabs { display: flex !important; }
         }
       `}</style>

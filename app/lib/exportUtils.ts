@@ -1,216 +1,270 @@
-import { ResumeData } from '../types/resume';
+import { ResumeData, ResumeSettings } from '../types/resume';
+import { DEFAULT_SETTINGS } from './constants';
 
 export async function exportToPDF() {
   const element = document.getElementById('resume-preview');
   if (!element) return;
 
-  // @ts-ignore
+  // @ts-ignore — html2pdf has no types
   const html2pdf = (await import('html2pdf.js')).default;
 
   const opt = {
     margin: 0,
     filename: 'resume.pdf',
-    image: { type: 'jpeg' as const, quality: 0.98 },
+    image:    { type: 'jpeg' as const, quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const },
+    jsPDF:    { unit: 'in', format: 'letter', orientation: 'portrait' as const },
   };
 
   html2pdf().set(opt).from(element).save();
 }
 
-export async function exportToDOCX(data: ResumeData) {
+/**
+ * Map a CSS hex like "#000000" to docx hex like "000000".
+ * Falls back to pure black for malformed input.
+ */
+function toDocxHex(cssColor: string): string {
+  const m = cssColor.trim().match(/^#?([0-9a-fA-F]{6})$/);
+  return m ? m[1].toUpperCase() : '000000';
+}
+
+function normalizeLinkedIn(url: string): { href: string; label: string } | null {
+  const raw = url.trim();
+  if (!raw) return null;
+  const href  = raw.startsWith('http') ? raw : `https://${raw}`;
+  const label = raw.replace(/^https?:\/\//, '');
+  return { href, label };
+}
+
+export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSettings) {
+  const settings = settingsArg ?? DEFAULT_SETTINGS;
+  const accent   = toDocxHex(settings.accentColor);
+
   const {
     Document, Packer, Paragraph, TextRun, AlignmentType,
-    LevelFormat, BorderStyle, UnderlineType,
+    LevelFormat, BorderStyle, UnderlineType, ExternalHyperlink,
+    TabStopType, TabStopPosition,
   } = await import('docx');
+
+  // docx uses Times New Roman in the .docx XML; "font" string just sets it.
+  // Density only affects on-screen preview; the .docx stays consistent.
+  const FONT = settings.fontFamily.includes('Garamond') ? 'EB Garamond'
+             : settings.fontFamily.includes('Cambria')  ? 'Cambria'
+             : settings.fontFamily.includes('Georgia')  ? 'Georgia'
+             :                                            'Times New Roman';
 
   const { contact, objective, education, skills, experiences, projects,
     volunteers, certifications, extracurriculars } = data;
 
-  const contactParts = [contact.phone, contact.email,
-    [contact.city, contact.country].filter(Boolean).join(', '),
-    contact.linkedin].filter(Boolean);
+  // ---------- helpers ----------
 
+  /** Thin black horizontal rule between sections. */
   const HR = () => new Paragraph({
-    border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: '1a3a6b', space: 1 } },
+    border: settings.showRules
+      ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 1 } }
+      : undefined,
     spacing: { before: 60, after: 60 },
     children: [],
   });
 
-  const thinHR = () => new Paragraph({
-    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'c8d4e8', space: 1 } },
-    spacing: { before: 40, after: 40 },
-    children: [],
+  /** Section heading: BOLD UPPERCASE in the chosen accent colour, with trailing colon. */
+  const sectionTitle = (text: string, suffix = '') => new Paragraph({
+    spacing: { before: 80, after: 60 },
+    children: [
+      new TextRun({ text: text.toUpperCase(), bold: true, size: 22, font: FONT, color: accent }),
+      ...(suffix ? [new TextRun({ text: ' ' + suffix, bold: false, size: 22, font: FONT, color: accent })] : []),
+    ],
   });
 
-  const sectionTitle = (text: string, suffix = '') =>
+  const bullet = (text: string) => new Paragraph({
+    numbering: { reference: 'bullets', level: 0 },
+    spacing:   { before: 20, after: 20 },
+    children:  [new TextRun({ text, size: 22, font: FONT })],
+  });
+
+  const RIGHT_TAB = TabStopPosition.MAX;
+  const tabStops  = [{ type: TabStopType.RIGHT, position: RIGHT_TAB }];
+
+  /** Row with bold-left and bold-right (institution + location). */
+  const boldRow = (left: string, leftDescItalic: string, right: string, underline = false) =>
     new Paragraph({
-      spacing: { before: 160, after: 60 },
+      tabStops,
+      spacing: { before: 80, after: 0 },
       children: [
-        new TextRun({ text: text.toUpperCase(), bold: true, size: 20, font: 'Times New Roman', color: '1a3a6b', allCaps: true }),
-        ...(suffix ? [new TextRun({ text: suffix, bold: false, size: 19, font: 'Times New Roman', color: '555577' })] : []),
+        new TextRun({
+          text: left, bold: true, size: 22, font: FONT,
+          ...(underline ? { underline: { type: UnderlineType.SINGLE } } : {}),
+        }),
+        ...(leftDescItalic ? [new TextRun({ text: ' (' + leftDescItalic + ')', italics: true, size: 20, font: FONT })] : []),
+        new TextRun({ text: right ? `\t${right}` : '', bold: true, size: 22, font: FONT }),
       ],
     });
 
-  const bullet = (text: string) =>
-    new Paragraph({
-      numbering: { reference: 'bullets', level: 0 },
-      spacing: { before: 20, after: 20 },
-      children: [new TextRun({ text, size: 19, font: 'Times New Roman' })],
-    });
+  /** Row with italic-left and italic-right (title + dates). */
+  const italicRow = (left: string, right: string) => new Paragraph({
+    tabStops,
+    spacing: { before: 0, after: 40 },
+    children: [
+      new TextRun({ text: left,  italics: true, size: 22, font: FONT }),
+      new TextRun({ text: right ? `\t${right}` : '', italics: true, size: 22, font: FONT }),
+    ],
+  });
 
-  const children: (typeof Paragraph.prototype)[] = [];
+  // ---------- build document ----------
 
-  // Name
-  if (contact.fullName) {
+  const children: InstanceType<typeof Paragraph>[] = [];
+
+  // Name (centred, bold, larger)
+  if (contact.fullName.trim()) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 0, after: 40 },
-      children: [new TextRun({ text: contact.fullName, bold: true, size: 36, font: 'Times New Roman' })],
+      children: [new TextRun({ text: contact.fullName, bold: true, size: 32, font: FONT })],
     }));
   }
 
-  // Contact line
-  if (contactParts.length) {
+  // Contact line — pipe-separated; LinkedIn rendered as a real hyperlink.
+  const linkedin = normalizeLinkedIn(contact.linkedin);
+  const cityCountry = [contact.city, contact.country].filter(Boolean).join(', ');
+  const contactRuns: any[] = [];
+  const sep = () => new TextRun({ text: ' | ', size: 21, font: FONT });
+
+  if (contact.phone.trim()) contactRuns.push(new TextRun({ text: contact.phone, size: 21, font: FONT }));
+  if (contact.email.trim()) {
+    if (contactRuns.length) contactRuns.push(sep());
+    contactRuns.push(new ExternalHyperlink({
+      link: `mailto:${contact.email.trim()}`,
+      children: [new TextRun({ text: contact.email, size: 21, font: FONT, style: 'Hyperlink' })],
+    }));
+  }
+  if (cityCountry) {
+    if (contactRuns.length) contactRuns.push(sep());
+    contactRuns.push(new TextRun({ text: cityCountry, size: 21, font: FONT }));
+  }
+  if (linkedin) {
+    if (contactRuns.length) contactRuns.push(sep());
+    contactRuns.push(new ExternalHyperlink({
+      link: linkedin.href,
+      children: [new TextRun({ text: linkedin.label, size: 21, font: FONT, style: 'Hyperlink' })],
+    }));
+  }
+  if (contactRuns.length) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 0, after: 60 },
-      children: [new TextRun({ text: contactParts.join(' | '), size: 19, font: 'Times New Roman' })],
+      children: contactRuns,
     }));
   }
 
-  children.push(HR());
+  if (contact.fullName.trim() || contactRuns.length) children.push(HR());
 
   // Objective
   if (objective.text.trim()) {
     children.push(sectionTitle('Objective:'));
     children.push(new Paragraph({
       spacing: { before: 20, after: 40 },
-      children: [new TextRun({ text: objective.text, size: 19, font: 'Times New Roman' })],
+      children: [new TextRun({ text: objective.text, size: 22, font: FONT })],
     }));
-    children.push(thinHR());
+    children.push(HR());
   }
 
   // Education
-  const hasEdu = education.some((e) => e.university.trim() || e.degree.trim());
-  if (hasEdu) {
+  const filledEdu = education.filter((e) => e.university.trim() || e.degree.trim());
+  if (filledEdu.length) {
     children.push(sectionTitle('Education:'));
-    education.filter((e) => e.university.trim() || e.degree.trim()).forEach((edu) => {
-      children.push(new Paragraph({
-        spacing: { before: 40, after: 0 },
-        children: [
-          new TextRun({ text: edu.university, bold: true, size: 20, font: 'Times New Roman' }),
-          new TextRun({ text: edu.location ? `\t${edu.location}` : '', size: 19, font: 'Times New Roman' }),
-        ],
-        tabStops: [{ type: 'right' as any, position: 9360 }],
-      }));
-      children.push(new Paragraph({
-        spacing: { before: 0, after: 20 },
-        children: [
-          new TextRun({ text: edu.degree + (edu.graduationDate ? ` — Expected Graduation: ${edu.graduationDate}` : ''), italics: true, size: 19, font: 'Times New Roman' }),
-        ],
-      }));
+    filledEdu.forEach((edu) => {
+      children.push(boldRow(edu.university, '', edu.location));
+      children.push(italicRow(
+        edu.degree,
+        edu.graduationDate ? `Expected Graduation: ${edu.graduationDate}` : '',
+      ));
       if (edu.relevantCoursework.trim()) children.push(bullet(`Relevant Coursework: ${edu.relevantCoursework}`));
       if (edu.awards.trim()) children.push(bullet(edu.awards));
     });
-    children.push(thinHR());
+    children.push(HR());
   }
 
   // Skills
-  const hasSkills = skills.some((s) => s.text.trim());
-  if (hasSkills) {
+  const filledSkills = skills.filter((s) => s.text.trim());
+  if (filledSkills.length) {
     children.push(sectionTitle('Skills:'));
-    skills.filter((s) => s.text.trim()).forEach((sk) => children.push(bullet(sk.text)));
-    children.push(thinHR());
+    filledSkills.forEach((s) => children.push(bullet(s.text)));
+    children.push(HR());
   }
 
   // Experience & Projects
-  const hasExp = experiences.some((e) => e.institution.trim());
-  const hasProj = projects.some((p) => p.title.trim());
-  if (hasExp || hasProj) {
+  const filledExp  = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
+  const filledProj = projects.filter((p) => p.title.trim() || p.institution.trim());
+  if (filledExp.length || filledProj.length) {
     children.push(sectionTitle('Professional & Project Experience:'));
-    experiences.filter((e) => e.institution.trim()).forEach((exp) => {
-      children.push(new Paragraph({
-        spacing: { before: 60, after: 0 },
-        children: [
-          new TextRun({ text: exp.institution, bold: true, underline: { type: UnderlineType.SINGLE }, size: 20, font: 'Times New Roman' }),
-          ...(exp.institutionDesc.trim() ? [new TextRun({ text: ` (${exp.institutionDesc})`, italics: true, size: 18, font: 'Times New Roman' })] : []),
-          new TextRun({ text: exp.location ? `\t${exp.location}` : '', size: 19, font: 'Times New Roman' }),
-        ],
-        tabStops: [{ type: 'right' as any, position: 9360 }],
-      }));
-      children.push(new Paragraph({
-        spacing: { before: 0, after: 20 },
-        children: [
-          new TextRun({ text: exp.jobTitle, italics: true, size: 19, font: 'Times New Roman' }),
-          new TextRun({ text: [exp.startDate, exp.endDate].filter(Boolean).join(' – ') ? `\t${[exp.startDate, exp.endDate].filter(Boolean).join(' – ')}` : '', italics: true, size: 19, font: 'Times New Roman' }),
-        ],
-        tabStops: [{ type: 'right' as any, position: 9360 }],
-      }));
+    filledExp.forEach((exp) => {
+      children.push(boldRow(exp.institution, exp.institutionDesc, exp.location, true));
+      children.push(italicRow(
+        exp.jobTitle,
+        [exp.startDate, exp.endDate].filter(Boolean).join(' – '),
+      ));
       exp.bullets.filter((b) => b.trim()).forEach((b) => children.push(bullet(b)));
     });
-    projects.filter((p) => p.title.trim()).forEach((proj) => {
-      children.push(new Paragraph({
-        spacing: { before: 60, after: 0 },
-        children: [
-          new TextRun({ text: proj.institution, bold: true, underline: { type: UnderlineType.SINGLE }, size: 20, font: 'Times New Roman' }),
-          new TextRun({ text: proj.location ? `\t${proj.location}` : '', size: 19, font: 'Times New Roman' }),
-        ],
-        tabStops: [{ type: 'right' as any, position: 9360 }],
-      }));
-      children.push(new Paragraph({
-        spacing: { before: 0, after: 20 },
-        children: [
-          new TextRun({ text: proj.title, italics: true, size: 19, font: 'Times New Roman' }),
-          new TextRun({ text: [proj.startDate, proj.endDate].filter(Boolean).join(' – ') ? `\t${[proj.startDate, proj.endDate].filter(Boolean).join(' – ')}` : '', italics: true, size: 19, font: 'Times New Roman' }),
-        ],
-        tabStops: [{ type: 'right' as any, position: 9360 }],
-      }));
+    filledProj.forEach((proj) => {
+      children.push(boldRow(proj.institution, '', proj.location, true));
+      children.push(italicRow(
+        proj.title,
+        [proj.startDate, proj.endDate].filter(Boolean).join(' – '),
+      ));
       proj.bullets.filter((b) => b.trim()).forEach((b) => children.push(bullet(b)));
     });
-    children.push(thinHR());
+    children.push(HR());
   }
 
   // Volunteer
-  if (volunteers.some((v) => v.text.trim())) {
-    children.push(sectionTitle('Volunteer Leadership:', ' [Optional]'));
-    volunteers.filter((v) => v.text.trim()).forEach((v) => children.push(bullet(v.text)));
-    children.push(thinHR());
+  const filledVol = volunteers.filter((v) => v.text.trim());
+  if (filledVol.length) {
+    children.push(sectionTitle('Volunteer Leadership:', '[Optional]'));
+    filledVol.forEach((v) => children.push(bullet(v.text)));
+    children.push(HR());
   }
 
   // Certifications
-  if (certifications.some((c) => c.text.trim())) {
-    children.push(sectionTitle('Certifications:', ' [If Applicable]'));
-    certifications.filter((c) => c.text.trim()).forEach((c) => children.push(bullet(c.text)));
-    children.push(thinHR());
+  const filledCerts = certifications.filter((c) => c.text.trim());
+  if (filledCerts.length) {
+    children.push(sectionTitle('Certifications:', '[If Applicable]'));
+    filledCerts.forEach((c) => children.push(bullet(c.text)));
+    children.push(HR());
   }
 
   // Extracurricular
-  const clubs = extracurriculars.filter((e) => e.type === 'club' && e.text.trim());
+  const clubs     = extracurriculars.filter((e) => e.type === 'club'     && e.text.trim());
   const interests = extracurriculars.filter((e) => e.type === 'interest' && e.text.trim());
   if (clubs.length || interests.length) {
     children.push(sectionTitle('Extracurricular Activities & Interests:'));
     if (clubs.length) {
       children.push(new Paragraph({
+        numbering: { reference: 'bullets', level: 0 },
         spacing: { before: 20, after: 20 },
         children: [
-          new TextRun({ text: 'Clubs: ', bold: true, size: 19, font: 'Times New Roman' }),
-          new TextRun({ text: clubs.map((c) => c.text).join('; '), size: 19, font: 'Times New Roman' }),
+          new TextRun({ text: 'Clubs: ',                       bold: true, size: 22, font: FONT }),
+          new TextRun({ text: clubs.map((c) => c.text).join('; '), size: 22, font: FONT }),
         ],
       }));
     }
     if (interests.length) {
       children.push(new Paragraph({
+        numbering: { reference: 'bullets', level: 0 },
         spacing: { before: 20, after: 20 },
         children: [
-          new TextRun({ text: 'Interests: ', bold: true, size: 19, font: 'Times New Roman' }),
-          new TextRun({ text: interests.map((i) => i.text).join('; '), size: 19, font: 'Times New Roman' }),
+          new TextRun({ text: 'Interests: ',                       bold: true, size: 22, font: FONT }),
+          new TextRun({ text: interests.map((i) => i.text).join('; '), size: 22, font: FONT }),
         ],
       }));
     }
   }
 
+  // ---------- assemble ----------
+
   const doc = new Document({
+    styles: {
+      default: { document: { run: { font: FONT, size: 22 } } },
+    },
     numbering: {
       config: [{
         reference: 'bullets',
@@ -226,7 +280,7 @@ export async function exportToDOCX(data: ResumeData) {
     sections: [{
       properties: {
         page: {
-          size: { width: 12240, height: 15840 },
+          size:   { width: 12240, height: 15840 },              // US Letter
           margin: { top: 1080, right: 1296, bottom: 1080, left: 1296 },
         },
       },
@@ -235,11 +289,13 @@ export async function exportToDOCX(data: ResumeData) {
   });
 
   const buffer = await Packer.toBuffer(doc);
-  const blob = new Blob([new Uint8Array(buffer)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const blob = new Blob([new Uint8Array(buffer)], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${data.contact.fullName || 'resume'}.docx`;
+  a.download = `${data.contact.fullName.trim() || 'resume'}.docx`;
   a.click();
   URL.revokeObjectURL(url);
 }

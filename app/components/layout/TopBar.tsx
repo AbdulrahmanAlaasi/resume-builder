@@ -20,12 +20,15 @@ export default function TopBar({
       justifyContent: 'space-between', flexShrink: 0, zIndex: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: 9,
-          background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontWeight: 700,
-        }}>R</div>
+        {/* Logo. Place the file at public/logo.png — Cloudflare Pages serves it at /logo.png */}
+        <img
+          src="/logo.png"
+          alt="Resume Builder logo"
+          width={36}
+          height={36}
+          style={{ borderRadius: 8, objectFit: 'contain', flexShrink: 0 }}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+        />
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>

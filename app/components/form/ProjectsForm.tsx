@@ -1,5 +1,6 @@
 'use client';
 import { useResumeStore } from '../../store/resumeStore';
+import { FORM_PLACEHOLDERS as P } from '../../lib/placeholders';
 
 export default function ProjectsForm() {
   const { data, updateProject, addProject, removeProject,
@@ -7,69 +8,69 @@ export default function ProjectsForm() {
 
   return (
     <div className="fade-in-up">
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>Projects</h2>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-          Academic, personal, or freelance projects that showcase your skills.
-        </p>
-      </div>
+      <p className="form-caption">Academic, personal, or freelance projects that showcase your skills.</p>
 
       {data.projects.map((proj, i) => (
         <div key={proj.id} className="section-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>Project {i + 1}</span>
+          <div className="card-head">
+            <span>Project {i + 1}</span>
             {data.projects.length > 1 && (
-              <button className="btn-danger" onClick={() => removeProject(proj.id)}>Remove</button>
+              <button className="btn-danger" onClick={() => removeProject(proj.id)} type="button">Remove</button>
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div style={{ gridColumn: '1 / -1' }}>
+          <div className="form-grid">
+            <div className="full">
               <label className="form-label">Project Title</label>
-              <input className="form-input" placeholder="AI-Powered Inventory Management System" value={proj.title}
+              <input className="form-input" placeholder={P.projTitle} value={proj.title}
                 onChange={(e) => updateProject(proj.id, { title: e.target.value })} />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
+            <div className="full">
               <label className="form-label">Institution / Organization</label>
-              <input className="form-input" placeholder="University Capstone Project / Personal" value={proj.institution}
+              <input className="form-input" placeholder={P.projInstitution} value={proj.institution}
                 onChange={(e) => updateProject(proj.id, { institution: e.target.value })} />
             </div>
             <div>
+              <label className="form-label">Location</label>
+              <input className="form-input" placeholder={P.projLocation} value={proj.location}
+                onChange={(e) => updateProject(proj.id, { location: e.target.value })} />
+            </div>
+            <div>
               <label className="form-label">Start Date</label>
-              <input className="form-input" placeholder="Sep 2024" value={proj.startDate}
+              <input className="form-input" placeholder={P.projStartDate} value={proj.startDate}
                 onChange={(e) => updateProject(proj.id, { startDate: e.target.value })} />
             </div>
             <div>
               <label className="form-label">End Date</label>
-              <input className="form-input" placeholder="Dec 2024" value={proj.endDate}
+              <input className="form-input" placeholder={P.projEndDate} value={proj.endDate}
                 onChange={(e) => updateProject(proj.id, { endDate: e.target.value })} />
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 14 }}>
             <label className="form-label">Project Description</label>
             {proj.bullets.map((bullet, bi) => (
-              <div key={bi} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
-                <span style={{ color: 'var(--accent)', fontSize: 14, marginTop: 12, flexShrink: 0 }}>•</span>
+              <div key={bi} className="bullet-row">
+                <span className="bullet-dot">•</span>
                 <textarea className="form-textarea" rows={2}
-                  placeholder="Describe the project scope, your role, technologies used, and impact."
+                  placeholder={P.projBullet}
                   value={bullet}
                   onChange={(e) => updateProjectBullet(proj.id, bi, e.target.value)}
-                  style={{ minHeight: 60 }}
+                  style={{ minHeight: 56 }}
                 />
                 {proj.bullets.length > 1 && (
                   <button className="btn-danger" onClick={() => removeProjectBullet(proj.id, bi)}
-                    style={{ marginTop: 8, flexShrink: 0 }}>✕</button>
+                    type="button" style={{ marginTop: 8, flexShrink: 0 }}>✕</button>
                 )}
               </div>
             ))}
             <button className="btn-add" onClick={() => addProjectBullet(proj.id)}
-              style={{ marginTop: 4 }}>+ Add Bullet Point</button>
+              type="button" style={{ marginTop: 4 }}>+ Add Bullet Point</button>
           </div>
         </div>
       ))}
 
-      <button className="btn-add" onClick={addProject}>+ Add Another Project</button>
+      <button className="btn-add" onClick={addProject} type="button">+ Add Another Project</button>
     </div>
   );
 }

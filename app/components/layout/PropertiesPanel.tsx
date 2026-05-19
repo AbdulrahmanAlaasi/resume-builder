@@ -13,13 +13,34 @@ interface Props {
 }
 
 export default function PropertiesPanel({ previewScale, onPreviewScaleChange }: Props) {
-  const { settings, updateSettings, resetSettings } = useResumeStore();
+  const { settings, updateSettings, resetSettings, toggleRightPanel } = useResumeStore();
 
   return (
     <aside className="props-panel" style={{
       background: 'var(--surface)', borderLeft: '1px solid var(--border)',
-      overflowY: 'auto', padding: '20px 18px',
+      overflowY: 'auto', padding: '14px 16px 20px',
     }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--border)',
+      }}>
+        <div style={{
+          fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+          textTransform: 'uppercase', color: 'var(--text-secondary)',
+        }}>
+          Properties
+        </div>
+        <button
+          className="icon-btn"
+          onClick={toggleRightPanel}
+          aria-label="Close properties panel"
+          title="Close properties panel"
+          type="button"
+        >
+          ›
+        </button>
+      </div>
+
       <PropsGroup title="Paper Size">
         <Segmented<PaperSize>
           value={settings.paperSize}
@@ -75,7 +96,7 @@ export default function PropertiesPanel({ previewScale, onPreviewScaleChange }: 
           ))}
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-          Black is the template default.
+          Black is the template default. Applies to both preview and export.
         </div>
       </PropsGroup>
 

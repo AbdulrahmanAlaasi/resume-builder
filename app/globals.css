@@ -12,10 +12,10 @@
   --surface-soft: #eef0f7;   /* hover / muted surface */
   --border:       #e6e8f0;   /* hairline borders */
   --border-strong:#d8dbe6;
-  --accent:       #4f6ef7;   /* primary blue */
-  --accent-hover: #3d5ae8;
-  --accent-glow:  rgba(79, 110, 247, 0.12);
-  --accent-2:     #7c5cfc;   /* secondary purple for gradient */
+  --accent:       #ED7A26;   /* logo orange */
+  --accent-hover: #d56518;
+  --accent-glow:  rgba(237, 122, 38, 0.14);
+  --accent-2:     #1f1f1f;   /* logo black for gradient */
   --text-primary:   #14172b;
   --text-secondary: #5d6580;
   --text-muted:     #9ba3b8;
@@ -270,6 +270,110 @@ body { margin: 0; min-height: 100vh; }
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 .toggle.on::after { transform: translateX(16px); }
+
+/* ── Icon button (collapse / chevron) ── */
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Floating "reopen properties" tab shown when the right panel is hidden. */
+.reopen-tab {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 56px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  z-index: 5;
+  transition: all 0.15s;
+}
+.reopen-tab:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Form layout primitives (used inside the accordion body) ── */
+.form-caption {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+.form-grid > .full { grid-column: 1 / -1; }
+@media (max-width: 1100px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.bullet-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.bullet-dot {
+  color: var(--accent);
+  font-size: 14px;
+  margin-top: 10px;
+  flex-shrink: 0;
+}
+.row-with-remove {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.row-with-remove > .form-input { flex: 1; }
+.subhead {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
 
 /* ── Animation ── */
 @keyframes fadeInUp {

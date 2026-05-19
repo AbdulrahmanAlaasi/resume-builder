@@ -63,8 +63,10 @@ interface ResumeStore {
   settings: ResumeSettings;
   activeSection: ActiveSection;
   expandedSections: ActiveSection[];
+  rightPanelOpen: boolean;
   setActiveSection: (s: ActiveSection) => void;
   toggleSection: (s: ActiveSection) => void;
+  toggleRightPanel: () => void;
   updateSettings: (partial: Partial<ResumeSettings>) => void;
   resetSettings: () => void;
   updateContact: (contact: Partial<ResumeData['contact']>) => void;
@@ -108,6 +110,9 @@ export const useResumeStore = create<ResumeStore>()(
       settings: DEFAULT_SETTINGS,
       activeSection: 'contact',
       expandedSections: ['contact'],
+      rightPanelOpen: true,
+      toggleRightPanel: () =>
+        set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
       setActiveSection: (s) => set({ activeSection: s }),
       toggleSection: (s) =>
         set((state) => ({

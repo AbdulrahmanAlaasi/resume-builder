@@ -16,6 +16,22 @@ This is a resume builder web app based on the **Al Yamamah University (YU) CV Te
 
 The top of the app shows the credit strip: "Built with ♥ by Abdulrahman · Supervised by the Career Center". It lives in `app/page.tsx` and is NOT printed on the exported resume.
 
+## Editing Placeholders
+
+All form-field placeholders live in **`app/lib/placeholders.ts`** as a single `FORM_PLACEHOLDERS` object. Each form imports it as `P` and uses keys like `P.contactFullName`, `P.expBullet`. To change a placeholder, edit only that file — every form input picks up the change automatically.
+
+## Logo
+
+Drop the logo image at **`public/logo.png`**. It is referenced from `app/components/layout/TopBar.tsx`. If missing, the `<img>` hides gracefully.
+
+## Theming
+
+Theme tokens live in `app/globals.css` (`:root`). Current accent colours:
+- `--accent: #ED7A26` (logo orange)
+- `--accent-2: #1f1f1f` (logo black; used as the secondary stop in gradients)
+
+Changing those two values restyles every button, focus ring, and the credit banner gradient.
+
 ## File Structure (post-refactor, integration-ready)
 
 ```
