@@ -69,9 +69,7 @@ resume-builder/
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
-├── public/
-│   ├── logo.png
-│   └── README.md
+├── public/                         # (empty — static assets land here when needed)
 ├── next.config.ts
 ├── postcss.config.mjs
 ├── tsconfig.json
