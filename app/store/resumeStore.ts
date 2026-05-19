@@ -3,14 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ResumeData, ActiveSection, ResumeSettings } from '../types/resume';
-
-export const defaultSettings: ResumeSettings = {
-  paperSize: 'letter',
-  density: 'normal',
-  fontFamily: '"Times New Roman", Times, serif',
-  accentColor: '#000000',
-  showRules: true,
-};
+import { DEFAULT_SETTINGS } from '../lib/constants';
 
 const defaultData: ResumeData = {
   contact: {
@@ -112,7 +105,7 @@ export const useResumeStore = create<ResumeStore>()(
   persist(
     (set) => ({
       data: defaultData,
-      settings: defaultSettings,
+      settings: DEFAULT_SETTINGS,
       activeSection: 'contact',
       expandedSections: ['contact'],
       setActiveSection: (s) => set({ activeSection: s }),
@@ -125,7 +118,7 @@ export const useResumeStore = create<ResumeStore>()(
         })),
       updateSettings: (partial) =>
         set((state) => ({ settings: { ...state.settings, ...partial } })),
-      resetSettings: () => set({ settings: defaultSettings }),
+      resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
       updateContact: (contact) =>
         set((state) => ({ data: { ...state.data, contact: { ...state.data.contact, ...contact } } })),
       updateObjective: (text) =>

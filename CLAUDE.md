@@ -12,6 +12,39 @@ This is a resume builder web app based on the **Al Yamamah University (YU) CV Te
 
 The top of the app shows the credit strip: "Built with ♥ by Abdulrahman · Supervised by the Career Center". It lives in `app/page.tsx` and is NOT printed on the exported resume.
 
+## File Structure (post-refactor, integration-ready)
+
+```
+app/
+├── components/
+│   ├── form/           # 9 section forms (Contact, Objective, …, Extracurricular)
+│   ├── layout/         # App-shell pieces — composed by page.tsx
+│   │   ├── CreditBanner.tsx
+│   │   ├── TopBar.tsx
+│   │   ├── BuilderPanel.tsx
+│   │   ├── PreviewArea.tsx
+│   │   ├── PropertiesPanel.tsx
+│   │   └── ResetModal.tsx
+│   ├── preview/
+│   │   └── ResumePreview.tsx   # Pure renderer — accepts data + settings as props
+│   └── ui/             # Reusable primitives
+│       ├── PropsGroup.tsx
+│       ├── Segmented.tsx
+│       └── Toggle.tsx
+├── lib/
+│   ├── constants.ts    # SECTIONS, FONT_CHOICES, ACCENT_CHOICES, DEFAULT_SETTINGS
+│   └── exportUtils.ts  # PDF & DOCX export
+├── store/
+│   └── resumeStore.ts  # Zustand store (data + settings + UI state)
+├── types/
+│   └── resume.ts       # ResumeData, ResumeSettings, ActiveSection, PaperSize, Density
+├── globals.css
+├── layout.tsx
+└── page.tsx            # Thin composition root: <CreditBanner /> <TopBar /> <body grid />
+```
+
+**Single source of truth:** `DEFAULT_SETTINGS` lives only in `lib/constants.ts` (imported by the store and the preview). The store is the single source of UI + resume state. `ResumePreview` is a pure prop-based renderer — safe to reuse server-side later for PDF generation when the API layer lands in Phase 5.
+
 ## UI Layout (Phase 3 — Talently-style light theme)
 
 The page is a vertical stack:

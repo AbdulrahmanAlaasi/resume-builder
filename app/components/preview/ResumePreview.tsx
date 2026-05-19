@@ -1,18 +1,11 @@
 'use client';
 import { ResumeData, ResumeSettings } from '../../types/resume';
+import { DEFAULT_SETTINGS } from '../../lib/constants';
 
 interface Props {
   data: ResumeData;
   settings?: ResumeSettings;
 }
-
-const DEFAULT_SETTINGS: ResumeSettings = {
-  paperSize: 'letter',
-  density: 'normal',
-  fontFamily: '"Times New Roman", Times, serif',
-  accentColor: '#000000',
-  showRules: true,
-};
 
 function buildStyles(settings: ResumeSettings) {
   const densityMap = {
