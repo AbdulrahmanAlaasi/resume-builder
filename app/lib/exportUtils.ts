@@ -54,7 +54,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
              : settings.fontFamily.includes('Georgia')  ? 'Georgia'
              :                                            'Times New Roman';
 
-  const { contact, objective, education, skills, experiences, projects,
+  const { contact, objective, education, skills, experiences,
     volunteers, certifications, extracurriculars } = data;
 
   // ---------- helpers ----------
@@ -78,12 +78,14 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   });
 
   const bullet = (text: string) => new Paragraph({
+    alignment: AlignmentType.JUSTIFIED,
     numbering: { reference: 'bullets', level: 0 },
     spacing:   { before: 20, after: 20 },
     children:  [new TextRun({ text, size: 22, font: FONT })],
   });
 
   const labelledBullet = (label: string, text: string) => new Paragraph({
+    alignment: AlignmentType.JUSTIFIED,
     numbering: { reference: 'bullets', level: 0 },
     spacing:   { before: 20, after: 20 },
     children: [
@@ -172,6 +174,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   if (objective.text.trim()) {
     children.push(sectionTitle('Objective'));
     children.push(new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
       spacing: { before: 20, after: 40 },
       children: [new TextRun({ text: objective.text, size: 22, font: FONT })],
     }));
@@ -204,8 +207,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
 
   // Experience & Projects
   const filledExp  = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
-  const filledProj = projects.filter((p) => p.title.trim() || p.institution.trim());
-  if (filledExp.length || filledProj.length) {
+  if (filledExp.length) {
     children.push(sectionTitle('Professional & Project Experience'));
     filledExp.forEach((exp) => {
       children.push(boldRow(exp.institution, exp.institutionDesc, exp.location, true));
@@ -214,14 +216,6 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
         [exp.startDate, exp.endDate].filter(Boolean).join(' – '),
       ));
       exp.bullets.filter((b) => b.trim()).forEach((b) => children.push(bullet(b)));
-    });
-    filledProj.forEach((proj) => {
-      children.push(boldRow(proj.institution, '', proj.location, true));
-      children.push(italicRow(
-        proj.title,
-        [proj.startDate, proj.endDate].filter(Boolean).join(' – '),
-      ));
-      proj.bullets.filter((b) => b.trim()).forEach((b) => children.push(bullet(b)));
     });
     children.push(HR());
   }
@@ -249,6 +243,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     children.push(sectionTitle('Extracurricular Activities & Interests'));
     if (clubs.length) {
       children.push(new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: 20, after: 20 },
         children: [
@@ -259,6 +254,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     }
     if (interests.length) {
       children.push(new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: 20, after: 20 },
         children: [

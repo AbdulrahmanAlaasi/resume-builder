@@ -53,7 +53,7 @@ export default function Home() {
 
   const cols = [
     '220px',                      // SectionNav (fixed)
-    detailPanelOpen && '320px',   // BuilderPanel (form)
+    detailPanelOpen && '380px',   // BuilderPanel (form)
     '1fr',                        // Preview
   ].filter(Boolean).join(' ');
 

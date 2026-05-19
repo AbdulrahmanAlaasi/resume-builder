@@ -30,13 +30,13 @@ export const FORM_PLACEHOLDERS = {
   skillText: 'Python, leadership, communication',
 
   // Experience
-  expInstitution: 'Saudi Aramco',
-  expInstitutionDesc: 'Global energy company and world’s largest oil producer',
+  expInstitution: 'Saudi Aramco or Personal Portfolio Website',
+  expInstitutionDesc: 'Global energy company, academic project, or portfolio project',
   expLocation: 'Dhahran, Saudi Arabia',
-  expJobTitle: 'Software Engineering Intern',
+  expJobTitle: 'Software Engineering Intern or Full-Stack Developer',
   expStartDate: 'June 2024',
   expEndDate: 'August 2024 (or Present)',
-  expBullet: 'Quantify your achievements — what impact did you have on the organization?',
+  expBullet: 'Quantify your achievements, responsibilities, project scope, technologies used, or outcomes.',
 
   // Projects
   projInstitution: 'Al Yamamah University',

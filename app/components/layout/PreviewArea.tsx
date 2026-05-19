@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 
 const ResumePreview = dynamic(
@@ -30,7 +30,9 @@ interface Props {
 export default function PreviewArea({ fileTitle, zoom }: Props) {
   const { data, settings, detailPanelOpen } = useResumeStore();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const previewShellRef = useRef<HTMLDivElement | null>(null);
   const [fitScale, setFitScale] = useState(0.9);
+  const [contentHeight, setContentHeight] = useState(PAPER_PX.letter.h);
 
   useLayoutEffect(() => {
     if (!containerRef.current) return;
@@ -51,6 +53,33 @@ export default function PreviewArea({ fileTitle, zoom }: Props) {
 
   const scale = fitScale * zoom;
   const paper = PAPER_PX[settings.paperSize];
+  const pageCount = Math.max(1, Math.ceil(contentHeight / paper.h));
+  const overPageLimit = pageCount > 1;
+
+  useLayoutEffect(() => {
+    const shell = previewShellRef.current;
+    if (!shell) return;
+
+    const measure = () => {
+      const preview = shell.querySelector<HTMLElement>('#resume-preview');
+      const nextHeight = Math.max(paper.h, preview?.scrollHeight ?? paper.h);
+      setContentHeight((current) => (
+        Math.abs(current - nextHeight) > 1 ? nextHeight : current
+      ));
+    };
+
+    measure();
+    const frame = window.requestAnimationFrame(measure);
+    const preview = shell.querySelector<HTMLElement>('#resume-preview');
+    const ro = new ResizeObserver(measure);
+    ro.observe(shell);
+    if (preview) ro.observe(preview);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
+  }, [data, settings, paper.h]);
 
   return (
     <main
@@ -64,7 +93,8 @@ export default function PreviewArea({ fileTitle, zoom }: Props) {
     >
       <div style={{
         fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10,
-        display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 8, flexShrink: 0, flexWrap: 'wrap', textAlign: 'center',
       }}>
         <span>{fileTitle}</span>
         <span style={{
@@ -74,14 +104,28 @@ export default function PreviewArea({ fileTitle, zoom }: Props) {
         }}>
           {settings.paperSize === 'a4' ? 'A4' : 'US Letter'}
         </span>
+        <span style={{
+          fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+          color: overPageLimit ? 'var(--danger)' : 'var(--success)',
+          border: `1px solid ${overPageLimit ? 'rgba(224, 64, 94, 0.35)' : 'rgba(22, 164, 116, 0.30)'}`,
+          padding: '2px 8px', borderRadius: 99,
+          background: overPageLimit ? 'rgba(224, 64, 94, 0.08)' : 'rgba(22, 164, 116, 0.08)',
+        }}>
+          {pageCount} {pageCount === 1 ? 'Page' : 'Pages'}
+        </span>
+        {overPageLimit && (
+          <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+            YU usually requires a 1-page CV
+          </span>
+        )}
       </div>
 
       <div style={{
         width:  paper.w * scale,
-        height: paper.h * scale,
+        height: contentHeight * scale,
         flexShrink: 0,
       }}>
-        <div style={{
+        <div ref={previewShellRef} style={{
           transformOrigin: 'top left',
           transform: `scale(${scale})`,
           boxShadow: '0 12px 36px rgba(20,23,43,0.10), 0 2px 6px rgba(20,23,43,0.05)',

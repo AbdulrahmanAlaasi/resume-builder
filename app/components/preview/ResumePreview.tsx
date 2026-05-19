@@ -93,7 +93,7 @@ function normalizeLinkedIn(url: string): { href: string; label: string } | null 
 
 export default function ResumePreview({ data, settings }: Props) {
   const s = buildStyles(settings ?? DEFAULT_SETTINGS);
-  const { contact, objective, education, skills, experiences, projects,
+  const { contact, objective, education, skills, experiences,
     volunteers, certifications, extracurriculars } = data;
 
   const linkedin    = normalizeLinkedIn(contact.linkedin);
@@ -114,8 +114,7 @@ export default function ResumePreview({ data, settings }: Props) {
   const showEducation = education.some((e) => e.university.trim() || e.degree.trim());
   const showSkills    = skills.some((sk) => sk.text.trim());
   const filledExp     = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
-  const filledProj    = projects.filter((p) => p.institution.trim() || p.title.trim());
-  const showExpProj   = filledExp.length > 0 || filledProj.length > 0;
+  const showExpProj   = filledExp.length > 0;
   const showVolunteer = volunteers.some((v) => v.text.trim());
   const showCerts     = certifications.some((c) => c.text.trim());
   const clubs         = extracurriculars.filter((e) => e.type === 'club'     && e.text.trim());
@@ -212,21 +211,6 @@ export default function ResumePreview({ data, settings }: Props) {
             </div>
           ))}
 
-          {filledProj.map((proj) => (
-            <div key={proj.id} style={{ marginBottom: 8 }}>
-              <div style={s.row}>
-                <span style={s.leftBoldUnderline}>{proj.institution || '[Organization]'}</span>
-                <span style={s.rightBold}>{proj.location || ''}</span>
-              </div>
-              <div style={s.row}>
-                <span style={s.italicLeft}>{proj.title || '[Project Title]'}</span>
-                <span style={s.italicRight}>
-                  {[proj.startDate, proj.endDate].filter(Boolean).join(' – ')}
-                </span>
-              </div>
-              <BulletList s={s} items={proj.bullets} />
-            </div>
-          ))}
           <div style={s.rule} />
         </>
       )}
