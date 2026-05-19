@@ -14,9 +14,9 @@ interface Props {
 
 function buildStyles(settings: ResumeSettings) {
   const densityMap = {
-    compact: { lineHeight: 1.18, padding: '0.5in 0.6in',  sectionGap: 2, bodySize: '10.5pt' },
-    normal:  { lineHeight: 1.3,  padding: '0.6in 0.7in',  sectionGap: 4, bodySize: '11pt'   },
-    roomy:   { lineHeight: 1.5,  padding: '0.75in 0.85in', sectionGap: 6, bodySize: '11.5pt' },
+    compact: { lineHeight: 1.18, padding: '0.55in 0.7in', sectionGap: 2, bodySize: '10.5pt' },
+    normal:  { lineHeight: 1.3,  padding: '0.75in 0.9in', sectionGap: 4, bodySize: '11pt'   },
+    roomy:   { lineHeight: 1.5,  padding: '0.85in 1in',   sectionGap: 6, bodySize: '11.5pt' },
   } as const;
   const d = densityMap[settings.density];
   const paper = settings.paperSize === 'a4'
@@ -70,11 +70,24 @@ function BulletList({ items, s }: { items: string[]; s: S }) {
   );
 }
 
+function LabelledBullet({ label, text, s }: { label: string; text: string; s: S }) {
+  const clean = text.trim();
+  if (!clean) return null;
+  return (
+    <ul style={s.bulletList}>
+      <li style={s.bulletItem}>
+        <span style={{ fontWeight: 700 }}>{label}</span>{' '}
+        {clean}
+      </li>
+    </ul>
+  );
+}
+
 function normalizeLinkedIn(url: string): { href: string; label: string } | null {
   const raw = url.trim();
   if (!raw) return null;
   const href = raw.startsWith('http') ? raw : `https://${raw}`;
-  const label = raw.replace(/^https?:\/\//, '');
+  const label = 'LinkedIn';
   return { href, label };
 }
 
@@ -153,13 +166,11 @@ export default function ResumePreview({ data, settings }: Props) {
               <div style={s.row}>
                 <span style={s.italicLeft}>{edu.degree || '[Your Degree Program]'}</span>
                 <span style={s.italicRight}>
-                  {edu.graduationDate ? `Expected Graduation: ${edu.graduationDate}` : ''}
+                  {edu.graduationDate ? `Expected Graduation ${edu.graduationDate}` : ''}
                 </span>
               </div>
-              <BulletList s={s} items={[
-                edu.relevantCoursework.trim() ? `Relevant Coursework: ${edu.relevantCoursework}` : '',
-                edu.awards,
-              ]} />
+              <LabelledBullet s={s} label="Relevant Coursework" text={edu.relevantCoursework} />
+              <BulletList s={s} items={[edu.awards]} />
             </div>
           ))}
           <div style={s.rule} />
@@ -223,9 +234,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* VOLUNTEER */}
       {showVolunteer && (
         <>
-          <div style={s.sectionHeader}>
-            VOLUNTEER LEADERSHIP <span style={{ fontWeight: 400, textTransform: 'none' }}>[OPTIONAL]</span>
-          </div>
+          <div style={s.sectionHeader}>VOLUNTEER LEADERSHIP</div>
           <BulletList s={s} items={volunteers.map((v) => v.text)} />
           <div style={s.rule} />
         </>
@@ -234,9 +243,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* CERTIFICATIONS */}
       {showCerts && (
         <>
-          <div style={s.sectionHeader}>
-            CERTIFICATIONS <span style={{ fontWeight: 400, textTransform: 'none' }}>[IF APPLICABLE]</span>
-          </div>
+          <div style={s.sectionHeader}>CERTIFICATIONS</div>
           <BulletList s={s} items={certifications.map((c) => c.text)} />
           <div style={s.rule} />
         </>
@@ -249,13 +256,13 @@ export default function ResumePreview({ data, settings }: Props) {
           <ul style={s.bulletList}>
             {clubs.length > 0 && (
               <li style={s.bulletItem}>
-                <span style={{ fontWeight: 700 }}>Clubs:</span>{' '}
+                <span style={{ fontWeight: 700 }}>Clubs</span>{' '}
                 {clubs.map((c) => c.text).join('; ')}
               </li>
             )}
             {interests.length > 0 && (
               <li style={s.bulletItem}>
-                <span style={{ fontWeight: 700 }}>Interests:</span>{' '}
+                <span style={{ fontWeight: 700 }}>Interests</span>{' '}
                 {interests.map((i) => i.text).join('; ')}
               </li>
             )}

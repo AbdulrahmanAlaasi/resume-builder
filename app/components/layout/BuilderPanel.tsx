@@ -8,7 +8,6 @@ import ObjectiveForm       from '../form/ObjectiveForm';
 import EducationForm       from '../form/EducationForm';
 import SkillsForm          from '../form/SkillsForm';
 import ExperienceForm      from '../form/ExperienceForm';
-import ProjectsForm        from '../form/ProjectsForm';
 import VolunteerForm       from '../form/VolunteerForm';
 import CertificationsForm  from '../form/CertificationsForm';
 import ExtracurricularForm from '../form/ExtracurricularForm';
@@ -20,7 +19,7 @@ const FORM_BY_SECTION: Record<ActiveSection, React.ComponentType> = {
   education:       EducationForm,
   skills:          SkillsForm,
   experience:      ExperienceForm,
-  projects:        ProjectsForm,
+  projects:        ExperienceForm,
   volunteer:       VolunteerForm,
   certifications:  CertificationsForm,
   extracurricular: ExtracurricularForm,
@@ -34,7 +33,9 @@ const FORM_BY_SECTION: Record<ActiveSection, React.ComponentType> = {
 export default function BuilderPanel() {
   const { activeSection, closeDetailPanel } = useResumeStore();
   const FormComp  = FORM_BY_SECTION[activeSection];
-  const label     = SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Section';
+  const label     = activeSection === 'projects'
+    ? 'Experience & Projects'
+    : SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Section';
 
   return (
     <aside className="builder-panel" style={{

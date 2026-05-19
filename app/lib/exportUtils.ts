@@ -1,9 +1,10 @@
 import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
 
-export async function exportToPDF() {
+export async function exportToPDF(settingsArg?: ResumeSettings) {
   const element = document.getElementById('resume-preview');
   if (!element) return;
+  const settings = settingsArg ?? DEFAULT_SETTINGS;
 
   // @ts-ignore — html2pdf has no types
   const html2pdf = (await import('html2pdf.js')).default;
@@ -13,7 +14,7 @@ export async function exportToPDF() {
     filename: 'resume.pdf',
     image:    { type: 'jpeg' as const, quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-    jsPDF:    { unit: 'in', format: 'letter', orientation: 'portrait' as const },
+    jsPDF:    { unit: 'in', format: settings.paperSize === 'a4' ? 'a4' : 'letter', orientation: 'portrait' as const },
   };
 
   html2pdf().set(opt).from(element).save();
@@ -32,7 +33,7 @@ function normalizeLinkedIn(url: string): { href: string; label: string } | null 
   const raw = url.trim();
   if (!raw) return null;
   const href  = raw.startsWith('http') ? raw : `https://${raw}`;
-  const label = raw.replace(/^https?:\/\//, '');
+  const label = 'LinkedIn';
   return { href, label };
 }
 
@@ -67,7 +68,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     children: [],
   });
 
-  /** Section heading: BOLD UPPERCASE in the chosen accent colour, with trailing colon. */
+  /** Section heading: BOLD UPPERCASE in the chosen accent colour. */
   const sectionTitle = (text: string, suffix = '') => new Paragraph({
     spacing: { before: 80, after: 60 },
     children: [
@@ -80,6 +81,15 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     numbering: { reference: 'bullets', level: 0 },
     spacing:   { before: 20, after: 20 },
     children:  [new TextRun({ text, size: 22, font: FONT })],
+  });
+
+  const labelledBullet = (label: string, text: string) => new Paragraph({
+    numbering: { reference: 'bullets', level: 0 },
+    spacing:   { before: 20, after: 20 },
+    children: [
+      new TextRun({ text: label + ' ', bold: true, size: 22, font: FONT }),
+      new TextRun({ text, size: 22, font: FONT }),
+    ],
   });
 
   const RIGHT_TAB = TabStopPosition.MAX;
@@ -176,9 +186,9 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
       children.push(boldRow(edu.university, '', edu.location));
       children.push(italicRow(
         edu.degree,
-        edu.graduationDate ? `Expected Graduation: ${edu.graduationDate}` : '',
+        edu.graduationDate ? `Expected Graduation ${edu.graduationDate}` : '',
       ));
-      if (edu.relevantCoursework.trim()) children.push(bullet(`Relevant Coursework: ${edu.relevantCoursework}`));
+      if (edu.relevantCoursework.trim()) children.push(labelledBullet('Relevant Coursework', edu.relevantCoursework));
       if (edu.awards.trim()) children.push(bullet(edu.awards));
     });
     children.push(HR());
@@ -219,7 +229,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Volunteer
   const filledVol = volunteers.filter((v) => v.text.trim());
   if (filledVol.length) {
-    children.push(sectionTitle('Volunteer Leadership', '[Optional]'));
+    children.push(sectionTitle('Volunteer Leadership'));
     filledVol.forEach((v) => children.push(bullet(v.text)));
     children.push(HR());
   }
@@ -227,7 +237,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Certifications
   const filledCerts = certifications.filter((c) => c.text.trim());
   if (filledCerts.length) {
-    children.push(sectionTitle('Certifications', '[If Applicable]'));
+    children.push(sectionTitle('Certifications'));
     filledCerts.forEach((c) => children.push(bullet(c.text)));
     children.push(HR());
   }
@@ -242,7 +252,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: 20, after: 20 },
         children: [
-          new TextRun({ text: 'Clubs: ',                       bold: true, size: 22, font: FONT }),
+          new TextRun({ text: 'Clubs ',                        bold: true, size: 22, font: FONT }),
           new TextRun({ text: clubs.map((c) => c.text).join('; '), size: 22, font: FONT }),
         ],
       }));
@@ -252,7 +262,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: 20, after: 20 },
         children: [
-          new TextRun({ text: 'Interests: ',                       bold: true, size: 22, font: FONT }),
+          new TextRun({ text: 'Interests ',                        bold: true, size: 22, font: FONT }),
           new TextRun({ text: interests.map((i) => i.text).join('; '), size: 22, font: FONT }),
         ],
       }));
@@ -280,7 +290,9 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     sections: [{
       properties: {
         page: {
-          size:   { width: 12240, height: 15840 },              // US Letter
+          size: settings.paperSize === 'a4'
+            ? { width: 11906, height: 16838 }
+            : { width: 12240, height: 15840 },
           margin: { top: 1080, right: 1296, bottom: 1080, left: 1296 },
         },
       },

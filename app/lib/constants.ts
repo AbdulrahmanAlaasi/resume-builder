@@ -9,10 +9,9 @@ export const SECTIONS: { id: ActiveSection; label: string }[] = [
   { id: 'objective',       label: 'Objective'            },
   { id: 'education',       label: 'Education'            },
   { id: 'skills',          label: 'Skills'               },
-  { id: 'experience',      label: 'Work Experience'      },
-  { id: 'projects',        label: 'Projects'             },
-  { id: 'volunteer',       label: 'Volunteer Leadership' },
-  { id: 'certifications',  label: 'Certifications'       },
+  { id: 'experience',      label: 'Experience & Projects' },
+  { id: 'volunteer',       label: 'Volunteer Leadership (Optional)' },
+  { id: 'certifications',  label: 'Certifications (If Applicable)' },
   { id: 'extracurricular', label: 'Extracurricular'      },
 ];
 

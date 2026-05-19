@@ -37,7 +37,8 @@ export default function Home() {
     setExporting('pdf');
     try {
       const { exportToPDF } = await import('./lib/exportUtils');
-      await exportToPDF();
+      const { settings }    = useResumeStore.getState();
+      await exportToPDF(settings);
     } finally { setExporting(null); }
   }, []);
 
@@ -91,11 +92,29 @@ export default function Home() {
 
       <style>{`
         @media (max-width: 980px) {
-          .body-grid          { grid-template-columns: 1fr !important; }
-          .section-nav-panel  { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
-          .builder-panel      { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
-          .preview-area       { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
-          .mobile-tabs        { display: flex !important; }
+          .body-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: ${mobileTab === 'edit' && detailPanelOpen ? 'minmax(210px, 34vh) minmax(0, 1fr)' : '1fr'};
+          }
+          .section-nav-panel  {
+            display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            border-right: 0 !important;
+            border-bottom: 1px solid var(--border) !important;
+          }
+          .builder-panel {
+            display: ${mobileTab === 'edit' && detailPanelOpen ? 'flex' : 'none'} !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            border-right: 0 !important;
+          }
+          .preview-area {
+            display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important;
+            min-height: 0 !important;
+          }
+          .mobile-tabs { display: flex !important; }
         }
       `}</style>
     </div>
