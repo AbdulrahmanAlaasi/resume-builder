@@ -5,22 +5,33 @@ import { useResumeStore } from './store/resumeStore';
 
 import CreditBanner     from './components/layout/CreditBanner';
 import TopBar           from './components/layout/TopBar';
+import BuilderRail      from './components/layout/BuilderRail';
 import BuilderPanel     from './components/layout/BuilderPanel';
 import PreviewArea      from './components/layout/PreviewArea';
 import PropertiesPanel  from './components/layout/PropertiesPanel';
 import ResetModal       from './components/layout/ResetModal';
 
 /**
- * App shell. Composes credit banner, top bar, and the three-column builder layout.
- * The right (properties) panel is togglable; when collapsed a thin reopen tab
- * appears on the right edge of the preview area.
+ * App shell. Composition order:
+ *   [ Credit banner ]
+ *   [ Top bar     ]
+ *   [ Rail | BuilderPanel? | Preview | PropertiesPanel? ]
+ *
+ * Both the BuilderPanel and the PropertiesPanel are togglable.
+ * The grid template column list is derived from the open/closed flags so
+ * the preview area always claims any freed horizontal space.
  */
 export default function Home() {
-  const { data, resetData, rightPanelOpen, toggleRightPanel } = useResumeStore();
+  const {
+    data, resetData,
+    builderPanelOpen, toggleBuilderPanel,
+    rightPanelOpen,
+  } = useResumeStore();
 
   const [exporting, setExporting]       = useState<null | 'pdf' | 'docx'>(null);
   const [showReset, setShowReset]       = useState(false);
-  const [previewScale, setPreviewScale] = useState(0.7);
+  const [manualScale, setManualScale]   = useState(0.7);
+  const [fitMode, setFitMode]           = useState<'fit' | 'manual'>('fit');
   const [mobileTab, setMobileTab]       = useState<'edit' | 'preview'>('edit');
 
   const fileTitle = useMemo(
@@ -47,7 +58,13 @@ export default function Home() {
     } finally { setExporting(null); }
   }, [data]);
 
-  const gridCols = rightPanelOpen ? '380px 1fr 280px' : '380px 1fr';
+  // Grid template — derived from which panels are open.
+  const cols = [
+    '56px',                       // rail (always visible on desktop)
+    builderPanelOpen && '340px',  // builder panel
+    '1fr',                        // preview
+    rightPanelOpen   && '280px',  // properties panel
+  ].filter(Boolean).join(' ');
 
   return (
     <div style={{
@@ -66,28 +83,49 @@ export default function Home() {
         exporting={exporting}
       />
 
-      <div className="body-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: gridCols,
-        flex: 1, overflow: 'hidden', position: 'relative',
-      }}>
-        <BuilderPanel />
+      <div
+        className="body-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: cols,
+          flex: 1, overflow: 'hidden', position: 'relative',
+        }}
+      >
+        <BuilderRail />
+        {builderPanelOpen && <BuilderPanel />}
+
         <div style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
-          <PreviewArea fileTitle={fileTitle} previewScale={previewScale} />
+          <PreviewArea
+            fileTitle={fileTitle}
+            manualScale={manualScale}
+            fitMode={fitMode}
+          />
+          {!builderPanelOpen && (
+            <button
+              type="button"
+              className="reopen-tab left"
+              onClick={toggleBuilderPanel}
+              aria-label="Show section panel"
+              title="Show section panel"
+            >›</button>
+          )}
           {!rightPanelOpen && (
             <button
-              className="reopen-tab"
-              onClick={toggleRightPanel}
-              aria-label="Open properties panel"
-              title="Open properties"
               type="button"
-            >‹</button>
+              className="reopen-tab right"
+              onClick={() => useResumeStore.getState().toggleRightPanel()}
+              aria-label="Show properties panel"
+              title="Show properties panel"
+            >‹ Properties</button>
           )}
         </div>
+
         {rightPanelOpen && (
           <PropertiesPanel
-            previewScale={previewScale}
-            onPreviewScaleChange={setPreviewScale}
+            manualScale={manualScale}
+            onManualScaleChange={setManualScale}
+            fitMode={fitMode}
+            onFitModeChange={setFitMode}
           />
         )}
       </div>
@@ -99,18 +137,14 @@ export default function Home() {
       />
 
       <style>{`
-        @media (max-width: 1180px) {
-          .body-grid {
-            grid-template-columns: ${rightPanelOpen ? '320px 1fr 260px' : '320px 1fr'} !important;
-          }
-        }
         @media (max-width: 980px) {
           .body-grid { grid-template-columns: 1fr !important; }
-          .builder-panel { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; }
-          .preview-area  { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
-          .props-panel { display: none !important; }
-          .reopen-tab { display: none !important; }
-          .mobile-tabs { display: flex !important; }
+          .builder-rail   { display: none !important; }
+          .builder-panel  { display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important; width: 100% !important; }
+          .preview-area   { display: ${mobileTab === 'preview' ? 'flex' : 'none'} !important; }
+          .props-panel    { display: none !important; }
+          .reopen-tab     { display: none !important; }
+          .mobile-tabs    { display: flex !important; }
         }
       `}</style>
     </div>

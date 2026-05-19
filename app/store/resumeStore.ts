@@ -62,10 +62,12 @@ interface ResumeStore {
   data: ResumeData;
   settings: ResumeSettings;
   activeSection: ActiveSection;
-  expandedSections: ActiveSection[];
+  builderPanelOpen: boolean;
   rightPanelOpen: boolean;
   setActiveSection: (s: ActiveSection) => void;
-  toggleSection: (s: ActiveSection) => void;
+  /** Click rail icon: open panel if closed (any section), or toggle if same. */
+  selectSectionFromRail: (s: ActiveSection) => void;
+  toggleBuilderPanel: () => void;
   toggleRightPanel: () => void;
   updateSettings: (partial: Partial<ResumeSettings>) => void;
   resetSettings: () => void;
@@ -109,18 +111,21 @@ export const useResumeStore = create<ResumeStore>()(
       data: defaultData,
       settings: DEFAULT_SETTINGS,
       activeSection: 'contact',
-      expandedSections: ['contact'],
+      builderPanelOpen: true,
       rightPanelOpen: true,
+      toggleBuilderPanel: () =>
+        set((state) => ({ builderPanelOpen: !state.builderPanelOpen })),
       toggleRightPanel: () =>
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
-      setActiveSection: (s) => set({ activeSection: s }),
-      toggleSection: (s) =>
-        set((state) => ({
-          expandedSections: state.expandedSections.includes(s)
-            ? state.expandedSections.filter((x) => x !== s)
-            : [...state.expandedSections, s],
-          activeSection: s,
-        })),
+      setActiveSection: (s) => set({ activeSection: s, builderPanelOpen: true }),
+      selectSectionFromRail: (s) =>
+        set((state) => {
+          // Clicking the active icon while the panel is open → close it.
+          if (state.builderPanelOpen && state.activeSection === s) {
+            return { builderPanelOpen: false };
+          }
+          return { activeSection: s, builderPanelOpen: true };
+        }),
       updateSettings: (partial) =>
         set((state) => ({ settings: { ...state.settings, ...partial } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),

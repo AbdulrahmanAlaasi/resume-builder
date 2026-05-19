@@ -144,38 +144,105 @@ body { margin: 0; min-height: 100vh; }
   margin-bottom: 12px;
 }
 
-/* ── Accordion (left panel) ── */
-.accordion-item {
-  border-bottom: 1px solid var(--border);
+/* ── Builder rail (slim icon column) ── */
+.builder-rail {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  gap: 4px;
+  overflow-y: auto;
 }
-.accordion-trigger {
-  width: 100%;
+.rail-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rail-btn:hover { background: var(--surface-soft); color: var(--text-primary); }
+.rail-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+.rail-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+}
+.rail-icon { display: flex; }
+.rail-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--text-primary);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 50;
+}
+.rail-btn:hover .rail-tooltip { opacity: 1; }
+
+/* ── Builder panel (slide-out form) ── */
+.builder-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 13px 16px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-primary);
-  font-family: inherit;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.builder-panel-title {
   font-size: 14px;
-  font-weight: 500;
-  text-align: left;
-  transition: background 0.15s;
+  font-weight: 700;
+  color: var(--text-primary);
 }
-.accordion-trigger:hover { background: var(--surface-soft); }
-.accordion-trigger.active { color: var(--accent); }
-.accordion-chevron {
-  font-size: 18px;
-  color: var(--text-muted);
-  transition: transform 0.2s;
+.builder-panel-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
 }
-.accordion-chevron.open { transform: rotate(45deg); color: var(--accent); }
-.accordion-body {
-  padding: 4px 16px 16px;
-  background: var(--surface-2);
+
+/* ── Properties panel head (matches builder panel) ── */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-head-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.panel-collapse-btn {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
 }
 
 /* ── Top-bar tabs (Builder / Templates) ── */
@@ -294,30 +361,40 @@ body { margin: 0; min-height: 100vh; }
   background: var(--accent-glow);
 }
 
-/* Floating "reopen properties" tab shown when the right panel is hidden. */
+/* Floating "reopen" tabs shown when a side panel is hidden. */
 .reopen-tab {
   position: absolute;
   top: 50%;
-  right: 0;
   transform: translateY(-50%);
-  width: 22px;
-  height: 56px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-right: none;
-  border-radius: 6px 0 0 6px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-secondary);
   z-index: 5;
   transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(20,23,43,0.05);
 }
 .reopen-tab:hover {
   color: var(--accent);
   border-color: var(--accent);
+  background: var(--accent-glow);
+}
+.reopen-tab.left {
+  left: 0;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 6px;
+}
+.reopen-tab.right {
+  right: 0;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  padding: 12px 8px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 /* ── Form layout primitives (used inside the accordion body) ── */

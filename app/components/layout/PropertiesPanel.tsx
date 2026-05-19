@@ -8,11 +8,15 @@ import Segmented from '../ui/Segmented';
 import Toggle from '../ui/Toggle';
 
 interface Props {
-  previewScale: number;
-  onPreviewScaleChange: (next: number) => void;
+  manualScale: number;
+  onManualScaleChange: (next: number) => void;
+  fitMode: 'fit' | 'manual';
+  onFitModeChange: (next: 'fit' | 'manual') => void;
 }
 
-export default function PropertiesPanel({ previewScale, onPreviewScaleChange }: Props) {
+export default function PropertiesPanel({
+  manualScale, onManualScaleChange, fitMode, onFitModeChange,
+}: Props) {
   const { settings, updateSettings, resetSettings, toggleRightPanel } = useResumeStore();
 
   return (
@@ -20,24 +24,16 @@ export default function PropertiesPanel({ previewScale, onPreviewScaleChange }: 
       background: 'var(--surface)', borderLeft: '1px solid var(--border)',
       overflowY: 'auto', padding: '14px 16px 20px',
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{
-          fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-          textTransform: 'uppercase', color: 'var(--text-secondary)',
-        }}>
-          Properties
-        </div>
+      <div className="panel-head">
+        <div className="panel-head-title">Properties</div>
         <button
-          className="icon-btn"
+          className="btn-ghost panel-collapse-btn"
           onClick={toggleRightPanel}
-          aria-label="Close properties panel"
-          title="Close properties panel"
+          aria-label="Hide properties panel"
+          title="Hide properties panel"
           type="button"
         >
-          ›
+          Hide ›
         </button>
       </div>
 
@@ -109,15 +105,27 @@ export default function PropertiesPanel({ previewScale, onPreviewScaleChange }: 
       </PropsGroup>
 
       <PropsGroup title="Preview Zoom">
-        <input
-          type="range" min={40} max={100}
-          value={Math.round(previewScale * 100)}
-          onChange={(e) => onPreviewScaleChange(Number(e.target.value) / 100)}
-          style={{ width: '100%', accentColor: 'var(--accent)' }}
+        <Segmented<'fit' | 'manual'>
+          value={fitMode}
+          options={[
+            { value: 'fit',    label: 'Fit width' },
+            { value: 'manual', label: 'Manual'    },
+          ]}
+          onChange={onFitModeChange}
         />
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
-          {Math.round(previewScale * 100)}%
-        </div>
+        {fitMode === 'manual' && (
+          <div style={{ marginTop: 8 }}>
+            <input
+              type="range" min={40} max={100}
+              value={Math.round(manualScale * 100)}
+              onChange={(e) => onManualScaleChange(Number(e.target.value) / 100)}
+              style={{ width: '100%', accentColor: 'var(--accent)' }}
+            />
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
+              {Math.round(manualScale * 100)}%
+            </div>
+          </div>
+        )}
       </PropsGroup>
 
       <button

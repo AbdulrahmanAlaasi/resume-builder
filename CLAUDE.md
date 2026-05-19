@@ -65,18 +65,20 @@ app/
 
 **Single source of truth:** `DEFAULT_SETTINGS` lives only in `lib/constants.ts` (imported by the store and the preview). The store is the single source of UI + resume state. `ResumePreview` is a pure prop-based renderer — safe to reuse server-side later for PDF generation when the API layer lands in Phase 5.
 
-## UI Layout (Phase 3 — Talently-style light theme)
+## UI Layout
 
 The page is a vertical stack:
 
 1. **Credit banner** — gradient strip, "Built with ♥ by Abdulrahman · Supervised by the Career Center".
-2. **Header** — logo + brand on left, file title in the middle (auto-derived from `contact.fullName`), `Reset / Word / PDF` buttons on the right.
-3. **3-column body grid** (`320px | 1fr | 300px`):
-   - **Left: Builder panel** — `Builder` / `Templates` top tabs. Builder tab renders the 9 sections as a collapsible accordion. Multiple sections can be open at once (state in `expandedSections`).
-   - **Center: Preview area** — soft grey background, paper-sized resume card with shadow. NO formatting toolbar (template is fixed-format on purpose). File title + paper-size badge above.
-   - **Right: Properties panel** — live formatting controls bound to `settings` in the store: paper size, density, font (serif only), section-heading colour, show/hide rules, preview zoom, and a "Reset to YU defaults" button.
+2. **Header** — logo (`/logo.png`) + brand on left, file title in middle (auto-derived from `contact.fullName`), `Reset / Word / PDF` buttons on the right.
+3. **Body grid** — variable column template derived from which side panels are open:
+   - **Rail** (56px, always visible on desktop): one icon per section. Clicking opens the BuilderPanel showing that section's form. Clicking the active icon again closes it. State: `activeSection` + `builderPanelOpen` in store.
+   - **BuilderPanel** (340px, toggleable): shows the form for `activeSection` only — *no accordion, no scrolling stack*. Has a header with the section name + close button.
+   - **Preview area** (`1fr`): paper-sized resume on a soft grey backdrop. Auto-scales to fit the available width via `ResizeObserver` when `fitMode === 'fit'`; manual slider available when `fitMode === 'manual'`.
+   - **PropertiesPanel** (280px, toggleable): live formatting controls bound to `settings`. Has a "Hide ›" button to close.
+   - When either side panel is hidden, a "reopen" tab appears at that edge of the preview area.
 
-On screens ≤ 980px the layout collapses to one column with `Edit` / `Preview` mobile tabs; the properties panel hides.
+On screens ≤ 980px the layout collapses to one column with `Edit` / `Preview` mobile tabs; rail and properties panel hide.
 
 ### Settings model
 
