@@ -1,4 +1,4 @@
-# CLAUDE.md - Resume Builder
+# AGENTS.md - Resume Builder
 
 Project guide for AI-assisted development. Keep this file in sync with the code.
 

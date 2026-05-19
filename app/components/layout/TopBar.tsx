@@ -19,20 +19,9 @@ export default function TopBar({
       padding: '0 20px', height: 58, display: 'flex', alignItems: 'center',
       justifyContent: 'space-between', flexShrink: 0, zIndex: 10,
     }}>
-      <div className="top-brand" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Logo. Place the file at public/logo.png — Cloudflare Pages serves it at /logo.png */}
-        <img
-          src="/logo.png"
-          alt="Resume Builder logo"
-          width={36}
-          height={36}
-          style={{ borderRadius: 8, objectFit: 'contain', flexShrink: 0 }}
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-        />
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>
-        </div>
+      <div className="top-brand">
+        <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>
       </div>
 
       <div className="top-title" style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
