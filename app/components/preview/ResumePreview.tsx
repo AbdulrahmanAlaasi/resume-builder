@@ -134,7 +134,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* OBJECTIVE */}
       {showObjective && (
         <>
-          <div style={s.sectionHeader}>OBJECTIVE:</div>
+          <div style={s.sectionHeader}>OBJECTIVE</div>
           <div>{objective.text}</div>
           <div style={s.rule} />
         </>
@@ -143,7 +143,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* EDUCATION */}
       {showEducation && (
         <>
-          <div style={s.sectionHeader}>EDUCATION:</div>
+          <div style={s.sectionHeader}>EDUCATION</div>
           {education.filter((e) => e.university.trim() || e.degree.trim()).map((edu) => (
             <div key={edu.id} style={{ marginBottom: 6 }}>
               <div style={s.row}>
@@ -169,7 +169,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* SKILLS */}
       {showSkills && (
         <>
-          <div style={s.sectionHeader}>SKILLS:</div>
+          <div style={s.sectionHeader}>SKILLS</div>
           <BulletList s={s} items={skills.map((sk) => sk.text)} />
           <div style={s.rule} />
         </>
@@ -178,7 +178,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* PROFESSIONAL & PROJECT EXPERIENCE */}
       {showExpProj && (
         <>
-          <div style={s.sectionHeader}>PROFESSIONAL &amp; PROJECT EXPERIENCE:</div>
+          <div style={s.sectionHeader}>PROFESSIONAL &amp; PROJECT EXPERIENCE</div>
 
           {filledExp.map((exp) => (
             <div key={exp.id} style={{ marginBottom: 8 }}>
@@ -224,7 +224,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {showVolunteer && (
         <>
           <div style={s.sectionHeader}>
-            VOLUNTEER LEADERSHIP: <span style={{ fontWeight: 400, textTransform: 'none' }}>[OPTIONAL]</span>
+            VOLUNTEER LEADERSHIP <span style={{ fontWeight: 400, textTransform: 'none' }}>[OPTIONAL]</span>
           </div>
           <BulletList s={s} items={volunteers.map((v) => v.text)} />
           <div style={s.rule} />
@@ -235,7 +235,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {showCerts && (
         <>
           <div style={s.sectionHeader}>
-            CERTIFICATIONS: <span style={{ fontWeight: 400, textTransform: 'none' }}>[IF APPLICABLE]</span>
+            CERTIFICATIONS <span style={{ fontWeight: 400, textTransform: 'none' }}>[IF APPLICABLE]</span>
           </div>
           <BulletList s={s} items={certifications.map((c) => c.text)} />
           <div style={s.rule} />
@@ -245,7 +245,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* EXTRACURRICULAR */}
       {showExtra && (
         <>
-          <div style={s.sectionHeader}>EXTRACURRICULAR ACTIVITIES &amp; INTERESTS:</div>
+          <div style={s.sectionHeader}>EXTRACURRICULAR ACTIVITIES &amp; INTERESTS</div>
           <ul style={s.bulletList}>
             {clubs.length > 0 && (
               <li style={s.bulletItem}>

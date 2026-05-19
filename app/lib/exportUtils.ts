@@ -160,7 +160,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
 
   // Objective
   if (objective.text.trim()) {
-    children.push(sectionTitle('Objective:'));
+    children.push(sectionTitle('Objective'));
     children.push(new Paragraph({
       spacing: { before: 20, after: 40 },
       children: [new TextRun({ text: objective.text, size: 22, font: FONT })],
@@ -171,7 +171,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Education
   const filledEdu = education.filter((e) => e.university.trim() || e.degree.trim());
   if (filledEdu.length) {
-    children.push(sectionTitle('Education:'));
+    children.push(sectionTitle('Education'));
     filledEdu.forEach((edu) => {
       children.push(boldRow(edu.university, '', edu.location));
       children.push(italicRow(
@@ -187,7 +187,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Skills
   const filledSkills = skills.filter((s) => s.text.trim());
   if (filledSkills.length) {
-    children.push(sectionTitle('Skills:'));
+    children.push(sectionTitle('Skills'));
     filledSkills.forEach((s) => children.push(bullet(s.text)));
     children.push(HR());
   }
@@ -196,7 +196,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   const filledExp  = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
   const filledProj = projects.filter((p) => p.title.trim() || p.institution.trim());
   if (filledExp.length || filledProj.length) {
-    children.push(sectionTitle('Professional & Project Experience:'));
+    children.push(sectionTitle('Professional & Project Experience'));
     filledExp.forEach((exp) => {
       children.push(boldRow(exp.institution, exp.institutionDesc, exp.location, true));
       children.push(italicRow(
@@ -219,7 +219,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Volunteer
   const filledVol = volunteers.filter((v) => v.text.trim());
   if (filledVol.length) {
-    children.push(sectionTitle('Volunteer Leadership:', '[Optional]'));
+    children.push(sectionTitle('Volunteer Leadership', '[Optional]'));
     filledVol.forEach((v) => children.push(bullet(v.text)));
     children.push(HR());
   }
@@ -227,7 +227,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Certifications
   const filledCerts = certifications.filter((c) => c.text.trim());
   if (filledCerts.length) {
-    children.push(sectionTitle('Certifications:', '[If Applicable]'));
+    children.push(sectionTitle('Certifications', '[If Applicable]'));
     filledCerts.forEach((c) => children.push(bullet(c.text)));
     children.push(HR());
   }
@@ -236,7 +236,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   const clubs     = extracurriculars.filter((e) => e.type === 'club'     && e.text.trim());
   const interests = extracurriculars.filter((e) => e.type === 'interest' && e.text.trim());
   if (clubs.length || interests.length) {
-    children.push(sectionTitle('Extracurricular Activities & Interests:'));
+    children.push(sectionTitle('Extracurricular Activities & Interests'));
     if (clubs.length) {
       children.push(new Paragraph({
         numbering: { reference: 'bullets', level: 0 },

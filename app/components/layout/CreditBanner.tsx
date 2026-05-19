@@ -16,7 +16,7 @@ export default function CreditBanner() {
       letterSpacing: '0.02em',
       flexShrink: 0,
     }}>
-      Built with <span style={{ color: '#ffd1d1' }}>♥</span> by Abdulrahman&nbsp;·&nbsp;Supervised by the Career Center
+      Built with <span style={{ color: '#ffd1d1' }}>♥</span> by Abdulrahman Alaasi&nbsp;·&nbsp;Supervised by the Career Center at YU
     </div>
   );
 }
