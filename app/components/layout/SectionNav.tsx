@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 import { SECTIONS } from '../../lib/constants';
+import { CV_EXAMPLES } from '../../lib/examples';
 import type { Density } from '../../types/resume';
 import Segmented from '../ui/Segmented';
+import ResumePreview from '../preview/ResumePreview';
 
 interface Props {
   zoom: number;
@@ -17,6 +20,8 @@ interface Props {
  */
 export default function SectionNav({ zoom, onZoomChange }: Props) {
   const { activeSection, detailPanelOpen, selectSection, settings, updateSettings } = useResumeStore();
+  const [openExampleId, setOpenExampleId] = useState<string | null>(null);
+  const openExample = CV_EXAMPLES.find((example) => example.id === openExampleId);
 
   return (
     <aside className="section-nav-panel">
@@ -38,6 +43,23 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
           );
         })}
       </nav>
+
+      <div className="examples-block">
+        <div className="section-nav-footer-label">Examples</div>
+        <div className="example-card-list">
+          {CV_EXAMPLES.map((example) => (
+            <button
+              key={example.id}
+              type="button"
+              className="example-card-btn"
+              onClick={() => setOpenExampleId(example.id)}
+            >
+              <span className="example-card-title">{example.title}</span>
+              <span className="example-card-subtitle">{example.subtitle}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="section-nav-footer">
         <div className="section-nav-footer-label">Density</div>
@@ -66,6 +88,36 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
           {Math.round(zoom * 100)}%
         </div>
       </div>
+
+      {openExample && (
+        <div className="example-modal-backdrop" role="dialog" aria-modal="true" aria-label={`${openExample.title} preview`}>
+          <div className="example-modal">
+            <div className="example-modal-head">
+              <div>
+                <div className="example-modal-title">{openExample.title}</div>
+                <div className="example-modal-subtitle">{openExample.subtitle}</div>
+              </div>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setOpenExampleId(null)}
+                aria-label="Close example preview"
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="example-preview-area">
+              <div className="example-preview-frame">
+                <div className="example-preview-paper">
+                  <ResumePreview data={openExample.data} settings={openExample.settings} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

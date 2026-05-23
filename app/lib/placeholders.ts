@@ -32,7 +32,7 @@ export const FORM_PLACEHOLDERS = {
   // Experience
   expInstitution: 'Saudi Aramco or Personal Portfolio Website',
   expInstitutionDesc: 'Global energy company, academic project, or portfolio project',
-  expLocation: 'Dhahran, Saudi Arabia',
+  expLocation: 'Riyadh, Saudi Arabia',
   expJobTitle: 'Software Engineering Intern or Full-Stack Developer',
   expStartDate: 'June 2024',
   expEndDate: 'August 2024 (or Present)',

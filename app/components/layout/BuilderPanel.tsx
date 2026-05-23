@@ -32,10 +32,10 @@ const FORM_BY_SECTION: Record<ActiveSection, React.ComponentType> = {
  */
 export default function BuilderPanel() {
   const { activeSection, closeDetailPanel } = useResumeStore();
-  const FormComp  = FORM_BY_SECTION[activeSection];
+  const FormComp  = FORM_BY_SECTION[activeSection] ?? ContactForm;
   const label     = activeSection === 'projects'
     ? 'Experience & Projects'
-    : SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Section';
+    : SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Contact Information';
 
   return (
     <aside className="builder-panel" style={{
