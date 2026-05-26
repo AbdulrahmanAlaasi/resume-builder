@@ -38,7 +38,7 @@ export const ACCENT_CHOICES: string[] = [
  */
 export const DEFAULT_SETTINGS: ResumeSettings = {
   paperSize:   'letter',
-  density:     'normal',
+  density:     'compact',
   fontFamily:  '"Times New Roman", Times, serif',
   accentColor: '#000000',
   showRules:   true,

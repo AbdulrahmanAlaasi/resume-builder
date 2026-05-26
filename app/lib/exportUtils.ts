@@ -1,5 +1,6 @@
 import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
+import { hasSkillContent, splitSkillLabel } from './skills';
 
 export async function exportToPDF(settingsArg?: ResumeSettings) {
   const element = document.getElementById('resume-preview');
@@ -44,15 +45,40 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   const {
     Document, Packer, Paragraph, TextRun, AlignmentType,
     LevelFormat, BorderStyle, UnderlineType, ExternalHyperlink,
-    TabStopType, TabStopPosition,
+    TabStopType,
   } = await import('docx');
 
   // docx uses Times New Roman in the .docx XML; "font" string just sets it.
-  // Density only affects on-screen preview; the .docx stays consistent.
   const FONT = settings.fontFamily.includes('Garamond') ? 'EB Garamond'
              : settings.fontFamily.includes('Cambria')  ? 'Cambria'
              : settings.fontFamily.includes('Georgia')  ? 'Georgia'
              :                                            'Times New Roman';
+
+  const DOCX_DENSITY = {
+    compact: {
+      body: 21, heading: 21, contact: 20, name: 30, desc: 19,
+      hrBefore: 35, hrAfter: 35,
+      sectionBefore: 45, sectionAfter: 35,
+      bulletBefore: 0, bulletAfter: 0,
+      rowBefore: 40, italicAfter: 20,
+      contactAfter: 35, objectiveAfter: 20, nameAfter: 25,
+      margin: { top: 792, right: 1008, bottom: 792, left: 1008 },
+    },
+    normal: {
+      body: 22, heading: 22, contact: 21, name: 32, desc: 20,
+      hrBefore: 60, hrAfter: 60,
+      sectionBefore: 80, sectionAfter: 60,
+      bulletBefore: 20, bulletAfter: 20,
+      rowBefore: 80, italicAfter: 40,
+      contactAfter: 60, objectiveAfter: 40, nameAfter: 40,
+      margin: { top: 1080, right: 1296, bottom: 1080, left: 1296 },
+    },
+  } as const;
+  const density = DOCX_DENSITY[settings.density] ?? DOCX_DENSITY.normal;
+  const pageSize = settings.paperSize === 'a4'
+    ? { width: 11906, height: 16838 }
+    : { width: 12240, height: 15840 };
+  const textWidth = pageSize.width - density.margin.left - density.margin.right;
 
   const { contact, objective, education, skills, experiences,
     volunteers, certifications, extracurriculars } = data;
@@ -64,61 +90,76 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     border: settings.showRules
       ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 1 } }
       : undefined,
-    spacing: { before: 60, after: 60 },
+    spacing: { before: density.hrBefore, after: density.hrAfter },
     children: [],
   });
 
   /** Section heading: BOLD UPPERCASE in the chosen accent colour. */
   const sectionTitle = (text: string, suffix = '') => new Paragraph({
-    spacing: { before: 80, after: 60 },
+    spacing: { before: density.sectionBefore, after: density.sectionAfter },
     children: [
-      new TextRun({ text: text.toUpperCase(), bold: true, size: 22, font: FONT, color: accent }),
-      ...(suffix ? [new TextRun({ text: ' ' + suffix, bold: false, size: 22, font: FONT, color: accent })] : []),
+      new TextRun({ text: text.toUpperCase(), bold: true, size: density.heading, font: FONT, color: accent }),
+      ...(suffix ? [new TextRun({ text: ' ' + suffix, bold: false, size: density.heading, font: FONT, color: accent })] : []),
     ],
   });
 
   const bullet = (text: string) => new Paragraph({
     alignment: AlignmentType.JUSTIFIED,
     numbering: { reference: 'bullets', level: 0 },
-    spacing:   { before: 20, after: 20 },
-    children:  [new TextRun({ text, size: 22, font: FONT })],
+    spacing:   { before: density.bulletBefore, after: density.bulletAfter },
+    children:  [new TextRun({ text, size: density.body, font: FONT })],
   });
 
   const labelledBullet = (label: string, text: string) => new Paragraph({
     alignment: AlignmentType.JUSTIFIED,
     numbering: { reference: 'bullets', level: 0 },
-    spacing:   { before: 20, after: 20 },
+    spacing:   { before: density.bulletBefore, after: density.bulletAfter },
     children: [
-      new TextRun({ text: label + ' ', bold: true, size: 22, font: FONT }),
-      new TextRun({ text, size: 22, font: FONT }),
+      new TextRun({ text: label + ' ', bold: true, size: density.body, font: FONT }),
+      new TextRun({ text, size: density.body, font: FONT }),
     ],
   });
 
-  const RIGHT_TAB = TabStopPosition.MAX;
+  const skillBullet = (text: string) => {
+    const labelled = splitSkillLabel(text);
+    if (!labelled) return bullet(text);
+
+    return new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      numbering: { reference: 'bullets', level: 0 },
+      spacing:   { before: density.bulletBefore, after: density.bulletAfter },
+      children: [
+        new TextRun({ text: labelled.label + ' ', bold: true, size: density.body, font: FONT }),
+        new TextRun({ text: labelled.value, size: density.body, font: FONT }),
+      ],
+    });
+  };
+
+  const RIGHT_TAB = textWidth;
   const tabStops  = [{ type: TabStopType.RIGHT, position: RIGHT_TAB }];
 
   /** Row with bold-left and bold-right (institution + location). */
   const boldRow = (left: string, leftDescItalic: string, right: string, underline = false) =>
     new Paragraph({
       tabStops,
-      spacing: { before: 80, after: 0 },
+      spacing: { before: density.rowBefore, after: 0 },
       children: [
         new TextRun({
-          text: left, bold: true, size: 22, font: FONT,
+          text: left, bold: true, size: density.body, font: FONT,
           ...(underline ? { underline: { type: UnderlineType.SINGLE } } : {}),
         }),
-        ...(leftDescItalic ? [new TextRun({ text: ' (' + leftDescItalic + ')', italics: true, size: 20, font: FONT })] : []),
-        new TextRun({ text: right ? `\t${right}` : '', bold: true, size: 22, font: FONT }),
+        ...(leftDescItalic ? [new TextRun({ text: ' (' + leftDescItalic + ')', italics: true, size: density.desc, font: FONT })] : []),
+        new TextRun({ text: right ? `\t${right}` : '', bold: true, size: density.body, font: FONT }),
       ],
     });
 
   /** Row with italic-left and italic-right (title + dates). */
   const italicRow = (left: string, right: string) => new Paragraph({
     tabStops,
-    spacing: { before: 0, after: 40 },
+    spacing: { before: 0, after: density.italicAfter },
     children: [
-      new TextRun({ text: left,  italics: true, size: 22, font: FONT }),
-      new TextRun({ text: right ? `\t${right}` : '', italics: true, size: 22, font: FONT }),
+      new TextRun({ text: left,  italics: true, size: density.body, font: FONT }),
+      new TextRun({ text: right ? `\t${right}` : '', italics: true, size: density.body, font: FONT }),
     ],
   });
 
@@ -130,8 +171,8 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   if (contact.fullName.trim()) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 0, after: 40 },
-      children: [new TextRun({ text: contact.fullName, bold: true, size: 32, font: FONT })],
+      spacing: { before: 0, after: density.nameAfter },
+      children: [new TextRun({ text: contact.fullName, bold: true, size: density.name, font: FONT })],
     }));
   }
 
@@ -139,31 +180,31 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   const linkedin = normalizeLinkedIn(contact.linkedin);
   const cityCountry = [contact.city, contact.country].filter(Boolean).join(', ');
   const contactRuns: any[] = [];
-  const sep = () => new TextRun({ text: ' | ', size: 21, font: FONT });
+  const sep = () => new TextRun({ text: ' | ', size: density.contact, font: FONT });
 
-  if (contact.phone.trim()) contactRuns.push(new TextRun({ text: contact.phone, size: 21, font: FONT }));
+  if (contact.phone.trim()) contactRuns.push(new TextRun({ text: contact.phone, size: density.contact, font: FONT }));
   if (contact.email.trim()) {
     if (contactRuns.length) contactRuns.push(sep());
     contactRuns.push(new ExternalHyperlink({
       link: `mailto:${contact.email.trim()}`,
-      children: [new TextRun({ text: contact.email, size: 21, font: FONT, style: 'Hyperlink' })],
+      children: [new TextRun({ text: contact.email, size: density.contact, font: FONT, style: 'Hyperlink' })],
     }));
   }
   if (cityCountry) {
     if (contactRuns.length) contactRuns.push(sep());
-    contactRuns.push(new TextRun({ text: cityCountry, size: 21, font: FONT }));
+    contactRuns.push(new TextRun({ text: cityCountry, size: density.contact, font: FONT }));
   }
   if (linkedin) {
     if (contactRuns.length) contactRuns.push(sep());
     contactRuns.push(new ExternalHyperlink({
       link: linkedin.href,
-      children: [new TextRun({ text: linkedin.label, size: 21, font: FONT, style: 'Hyperlink' })],
+      children: [new TextRun({ text: linkedin.label, size: density.contact, font: FONT, style: 'Hyperlink' })],
     }));
   }
   if (contactRuns.length) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 0, after: 60 },
+      spacing: { before: 0, after: density.contactAfter },
       children: contactRuns,
     }));
   }
@@ -175,8 +216,8 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     children.push(sectionTitle('Objective'));
     children.push(new Paragraph({
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { before: 20, after: 40 },
-      children: [new TextRun({ text: objective.text, size: 22, font: FONT })],
+      spacing: { before: density.bulletBefore, after: density.objectiveAfter },
+      children: [new TextRun({ text: objective.text, size: density.body, font: FONT })],
     }));
     children.push(HR());
   }
@@ -198,10 +239,10 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   }
 
   // Skills
-  const filledSkills = skills.filter((s) => s.text.trim());
+  const filledSkills = skills.filter((s) => hasSkillContent(s.text));
   if (filledSkills.length) {
     children.push(sectionTitle('Skills'));
-    filledSkills.forEach((s) => children.push(bullet(s.text)));
+    filledSkills.forEach((s) => children.push(skillBullet(s.text)));
     children.push(HR());
   }
 
@@ -245,10 +286,10 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
       children.push(new Paragraph({
         alignment: AlignmentType.JUSTIFIED,
         numbering: { reference: 'bullets', level: 0 },
-        spacing: { before: 20, after: 20 },
+        spacing: { before: density.bulletBefore, after: density.bulletAfter },
         children: [
-          new TextRun({ text: 'Clubs ',                        bold: true, size: 22, font: FONT }),
-          new TextRun({ text: clubs.map((c) => c.text).join('; '), size: 22, font: FONT }),
+          new TextRun({ text: 'Clubs ',                        bold: true, size: density.body, font: FONT }),
+          new TextRun({ text: clubs.map((c) => c.text).join('; '), size: density.body, font: FONT }),
         ],
       }));
     }
@@ -256,10 +297,10 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
       children.push(new Paragraph({
         alignment: AlignmentType.JUSTIFIED,
         numbering: { reference: 'bullets', level: 0 },
-        spacing: { before: 20, after: 20 },
+        spacing: { before: density.bulletBefore, after: density.bulletAfter },
         children: [
-          new TextRun({ text: 'Interests ',                        bold: true, size: 22, font: FONT }),
-          new TextRun({ text: interests.map((i) => i.text).join('; '), size: 22, font: FONT }),
+          new TextRun({ text: 'Interests ',                        bold: true, size: density.body, font: FONT }),
+          new TextRun({ text: interests.map((i) => i.text).join('; '), size: density.body, font: FONT }),
         ],
       }));
     }
@@ -269,7 +310,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
 
   const doc = new Document({
     styles: {
-      default: { document: { run: { font: FONT, size: 22 } } },
+      default: { document: { run: { font: FONT, size: density.body } } },
     },
     numbering: {
       config: [{
@@ -286,10 +327,8 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     sections: [{
       properties: {
         page: {
-          size: settings.paperSize === 'a4'
-            ? { width: 11906, height: 16838 }
-            : { width: 12240, height: 15840 },
-          margin: { top: 1080, right: 1296, bottom: 1080, left: 1296 },
+          size: pageSize,
+          margin: density.margin,
         },
       },
       children,

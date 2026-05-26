@@ -19,9 +19,10 @@ interface Props {
  * Bottom: compact controls — density + preview zoom slider.
  */
 export default function SectionNav({ zoom, onZoomChange }: Props) {
-  const { activeSection, detailPanelOpen, selectSection, settings, updateSettings } = useResumeStore();
+  const { activeSection, detailPanelOpen, selectSection, settings, updateSettings, loadExample } = useResumeStore();
   const [openExampleId, setOpenExampleId] = useState<string | null>(null);
   const openExample = CV_EXAMPLES.find((example) => example.id === openExampleId);
+  const densityValue: Density = settings.density === 'compact' ? 'compact' : 'normal';
 
   return (
     <aside className="section-nav-panel">
@@ -64,11 +65,10 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
       <div className="section-nav-footer">
         <div className="section-nav-footer-label">Density</div>
         <Segmented<Density>
-          value={settings.density}
+          value={densityValue}
           options={[
             { value: 'compact', label: 'Compact' },
             { value: 'normal',  label: 'Normal'  },
-            { value: 'roomy',   label: 'Roomy'   },
           ]}
           onChange={(v) => updateSettings({ density: v })}
         />
@@ -114,6 +114,26 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
                   <ResumePreview data={openExample.data} settings={openExample.settings} />
                 </div>
               </div>
+            </div>
+
+            <div className="example-modal-actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setOpenExampleId(null)}
+              >
+                Keep Browsing
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  loadExample(openExample.data, openExample.settings);
+                  setOpenExampleId(null);
+                }}
+              >
+                Use This Editable Example
+              </button>
             </div>
           </div>
         </div>

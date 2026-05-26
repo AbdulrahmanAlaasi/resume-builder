@@ -26,7 +26,10 @@ const defaultData: ResumeData = {
       awards: '',
     },
   ],
-  skills: [{ id: '1', text: '' }],
+  skills: [
+    { id: '1', text: 'Technical Skills' },
+    { id: '2', text: 'Soft Skills' },
+  ],
   experiences: [
     {
       id: '1',
@@ -100,6 +103,7 @@ interface ResumeStore {
   updateExtracurricular: (id: string, text: string) => void;
   addExtracurricular: (type: 'club' | 'interest') => void;
   removeExtracurricular: (id: string) => void;
+  loadExample: (data: ResumeData, settings?: ResumeSettings) => void;
   resetData: () => void;
 }
 
@@ -303,6 +307,13 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => ({
           data: { ...state.data, extracurriculars: state.data.extracurriculars.filter((e) => e.id !== id) },
         })),
+      loadExample: (data, settings) =>
+        set({
+          data: JSON.parse(JSON.stringify(data)),
+          settings: settings ?? DEFAULT_SETTINGS,
+          activeSection: 'contact',
+          detailPanelOpen: true,
+        }),
       resetData: () => set({ data: defaultData }),
     }),
     { name: 'resume-builder-data' }

@@ -1,6 +1,7 @@
 'use client';
 import { ResumeData, ResumeSettings } from '../../types/resume';
 import { DEFAULT_SETTINGS } from '../../lib/constants';
+import { hasSkillContent, splitSkillLabel } from '../../lib/skills';
 
 interface Props {
   data: ResumeData;
@@ -16,9 +17,8 @@ function buildStyles(settings: ResumeSettings) {
   const densityMap = {
     compact: { lineHeight: 1.18, padding: '0.55in 0.7in', sectionGap: 2, bodySize: '10.5pt' },
     normal:  { lineHeight: 1.3,  padding: '0.75in 0.9in', sectionGap: 4, bodySize: '11pt'   },
-    roomy:   { lineHeight: 1.5,  padding: '0.85in 1in',   sectionGap: 6, bodySize: '11.5pt' },
   } as const;
-  const d = densityMap[settings.density];
+  const d = densityMap[settings.density] ?? densityMap.normal;
   const paper = settings.paperSize === 'a4'
     ? { width: '210mm', minHeight: '297mm' }
     : { width: '8.5in', minHeight: '11in' };
@@ -45,13 +45,16 @@ function buildStyles(settings: ResumeSettings) {
       marginTop: d.sectionGap, marginBottom: d.sectionGap,
     },
     row: {
-      display: 'flex', justifyContent: 'space-between',
-      alignItems: 'baseline', gap: 12,
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 1fr) max-content',
+      alignItems: 'baseline',
+      columnGap: 12,
     } as React.CSSProperties,
+    leftCell: { minWidth: 0 } as React.CSSProperties,
     leftBoldUnderline: { fontWeight: 700, textDecoration: 'underline' as const },
-    rightBold:         { fontWeight: 700 },
+    rightBold:         { fontWeight: 700, textAlign: 'right' as const, whiteSpace: 'nowrap' as const },
     italicLeft:        { fontStyle: 'italic' as const },
-    italicRight:       { fontStyle: 'italic' as const, whiteSpace: 'nowrap' as const },
+    italicRight:       { fontStyle: 'italic' as const, textAlign: 'right' as const, whiteSpace: 'nowrap' as const },
     bulletList: { margin: '2px 0 6px 0', paddingLeft: '0.35in' } as React.CSSProperties,
     bulletItem: { marginBottom: 2 },
     link:        { color: '#000', textDecoration: 'underline' } as React.CSSProperties,
@@ -79,6 +82,28 @@ function LabelledBullet({ label, text, s }: { label: string; text: string; s: S 
         <span style={{ fontWeight: 700 }}>{label}</span>{' '}
         {clean}
       </li>
+    </ul>
+  );
+}
+
+function SkillBulletList({ items, s }: { items: string[]; s: S }) {
+  const clean = items.map((i) => i.trim()).filter(hasSkillContent);
+  if (clean.length === 0) return null;
+  return (
+    <ul style={s.bulletList}>
+      {clean.map((text, i) => {
+        const labelled = splitSkillLabel(text);
+        return (
+          <li key={i} style={s.bulletItem}>
+            {labelled ? (
+              <>
+                <span style={{ fontWeight: 700 }}>{labelled.label}</span>{' '}
+                {labelled.value}
+              </>
+            ) : text}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -112,7 +137,7 @@ export default function ResumePreview({ data, settings }: Props) {
 
   const showObjective = !!objective.text.trim();
   const showEducation = education.some((e) => e.university.trim() || e.degree.trim());
-  const showSkills    = skills.some((sk) => sk.text.trim());
+  const showSkills    = skills.some((sk) => hasSkillContent(sk.text));
   const filledExp     = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
   const showExpProj   = filledExp.length > 0;
   const showVolunteer = volunteers.some((v) => v.text.trim());
@@ -159,11 +184,13 @@ export default function ResumePreview({ data, settings }: Props) {
           {education.filter((e) => e.university.trim() || e.degree.trim()).map((edu) => (
             <div key={edu.id} style={{ marginBottom: 6 }}>
               <div style={s.row}>
-                <span style={s.rightBold}>{edu.university || '[University Name]'}</span>
+                <span style={{ ...s.leftCell, ...s.rightBold, textAlign: 'left', whiteSpace: 'normal' }}>
+                  {edu.university || '[University Name]'}
+                </span>
                 <span style={s.rightBold}>{edu.location || ''}</span>
               </div>
               <div style={s.row}>
-                <span style={s.italicLeft}>{edu.degree || '[Your Degree Program]'}</span>
+                <span style={{ ...s.leftCell, ...s.italicLeft }}>{edu.degree || '[Your Degree Program]'}</span>
                 <span style={s.italicRight}>
                   {edu.graduationDate ? `Expected Graduation ${edu.graduationDate}` : ''}
                 </span>
@@ -180,7 +207,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {showSkills && (
         <>
           <div style={s.sectionHeader}>SKILLS</div>
-          <BulletList s={s} items={skills.map((sk) => sk.text)} />
+          <SkillBulletList s={s} items={skills.map((sk) => sk.text)} />
           <div style={s.rule} />
         </>
       )}
@@ -193,7 +220,7 @@ export default function ResumePreview({ data, settings }: Props) {
           {filledExp.map((exp) => (
             <div key={exp.id} style={{ marginBottom: 8 }}>
               <div style={s.row}>
-                <span>
+                <span style={s.leftCell}>
                   <span style={s.leftBoldUnderline}>{exp.institution || '[Name of Institution]'}</span>
                   {exp.institutionDesc.trim() && (
                     <span style={s.italicLeft}> ({exp.institutionDesc})</span>
@@ -202,7 +229,7 @@ export default function ResumePreview({ data, settings }: Props) {
                 <span style={s.rightBold}>{exp.location || ''}</span>
               </div>
               <div style={s.row}>
-                <span style={s.italicLeft}>{exp.jobTitle || '[Job Title]'}</span>
+                <span style={{ ...s.leftCell, ...s.italicLeft }}>{exp.jobTitle || '[Job Title]'}</span>
                 <span style={s.italicRight}>
                   {[exp.startDate, exp.endDate].filter(Boolean).join(' – ')}
                 </span>

@@ -76,7 +76,7 @@ export interface ResumeData {
 }
 
 export type PaperSize = 'letter' | 'a4';
-export type Density = 'compact' | 'normal' | 'roomy';
+export type Density = 'compact' | 'normal';
 
 export interface ResumeSettings {
   paperSize: PaperSize;
