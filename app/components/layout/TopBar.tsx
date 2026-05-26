@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 interface Props {
   fileTitle: string;
   mobileTab: 'edit' | 'preview';
@@ -19,9 +21,12 @@ export default function TopBar({
       padding: '0 20px', height: 58, display: 'flex', alignItems: 'center',
       justifyContent: 'space-between', flexShrink: 0, zIndex: 10,
     }}>
-      <div className="top-brand">
-        <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>
+      <div className="top-brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Image src="/logo32.png" alt="Resu logo" width={36} height={36} style={{ borderRadius: 8 }} />
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>
+        </div>
       </div>
 
       <div className="top-title" style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
