@@ -1,7 +1,5 @@
 'use client';
 
-import Image from 'next/image';
-
 interface Props {
   fileTitle: string;
   mobileTab: 'edit' | 'preview';
@@ -22,7 +20,8 @@ export default function TopBar({
       justifyContent: 'space-between', flexShrink: 0, zIndex: 10,
     }}>
       <div className="top-brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Image src="/logo32.png" alt="Resu logo" width={36} height={36} style={{ borderRadius: 8 }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo32.png" alt="Resu logo" width={36} height={36} style={{ borderRadius: 8, display: 'block' }} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>
