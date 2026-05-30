@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useResumeStore } from './store/resumeStore';
+import { useYamamerBridge } from './hooks/useYamamerBridge';
 
 import CreditBanner from './components/layout/CreditBanner';
 import TopBar       from './components/layout/TopBar';
@@ -20,6 +21,9 @@ import ResetModal   from './components/layout/ResetModal';
  */
 export default function Home() {
   const { data, resetData, detailPanelOpen } = useResumeStore();
+
+  // Yamamer iframe bridge — inert when not embedded in an iframe.
+  useYamamerBridge();
 
   const [exporting, setExporting] = useState<null | 'pdf' | 'docx'>(null);
   const [showReset, setShowReset] = useState(false);
