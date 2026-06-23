@@ -26,7 +26,7 @@ Repo: `github.com/AbdulrahmanAlaasi/resume-builder`
 | TypeScript | 5 | Type safety |
 | Tailwind CSS | 4 | Via `@tailwindcss/postcss` |
 | Zustand | 5 | State and localStorage persistence |
-| html2pdf.js | 0.14 | Browser-side PDF export |
+| @react-pdf/renderer | 4.5 | Browser-side structured PDF export |
 | docx | 9.6 | Browser-side DOCX export |
 
 ## File Structure
@@ -58,9 +58,13 @@ resume-builder/
 │   │       ├── PropsGroup.tsx
 │   │       ├── Segmented.tsx
 │   │       └── Toggle.tsx
+│   ├── hooks/
+│   │   └── useYamamerBridge.ts   # iframe postMessage bridge (inert outside an iframe)
 │   ├── lib/
 │   │   ├── constants.ts
-│   │   ├── exportUtils.ts
+│   │   ├── exportUtils.ts        # DOCX export
+│   │   ├── resumePdf.tsx         # structured PDF export (@react-pdf/renderer)
+│   │   ├── yamamerBridge.ts      # bridge pure logic (origin allowlist, path resolver)
 │   │   └── placeholders.ts
 │   ├── store/
 │   │   └── resumeStore.ts
@@ -69,7 +73,9 @@ resume-builder/
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
-├── public/                         # (empty — static assets land here when needed)
+├── public/                         # logo32.png, favicon.png
+├── docs/
+│   └── yamamer-iframe-bridge.md    # iframe postMessage protocol reference
 ├── next.config.ts
 ├── postcss.config.mjs
 ├── tsconfig.json
@@ -92,7 +98,7 @@ SectionNav (220px) | BuilderPanel (380px, conditional) | PreviewArea (fills rest
 - `SectionNav.tsx`: always-visible left sidebar. Lists the visible resume sections and contains the only formatting controls: Density and Preview Zoom.
 - `BuilderPanel.tsx`: 380px detail panel. Shows the active form and can be closed with the X button.
 - `PreviewArea.tsx`: auto-fits the resume to the available width with `ResizeObserver`, applies the user zoom multiplier, shows A4/US Letter, and displays a live page count. If the resume exceeds one page, it shows the warning: "YU usually requires a 1-page CV".
-- Mobile at `max-width: 980px`: switches to a single-column Edit / Preview tab layout.
+- Mobile at `max-width: 980px`: single-column Edit / Preview tabs with a **drill-down** edit flow — the section list and the section form are shown one full screen at a time (swapped on `detailPanelOpen`), with a "‹ Sections" back button in the form header. Desktop shows nav + form side by side as before.
 
 ## Visible Sections
 
@@ -165,11 +171,14 @@ All placeholder copy lives in `app/lib/placeholders.ts` as `FORM_PLACEHOLDERS`.
 
 ### PDF
 
-`exportToPDF(settings)`:
-- Targets `#resume-preview`.
-- Dynamically imports `html2pdf.js`.
-- Uses the current paper size, A4 or Letter.
-- Filename: `resume.pdf`.
+`exportToPDF(data, settings)` lives in `app/lib/resumePdf.tsx`:
+- Structured (vector) PDF via `@react-pdf/renderer` — **not** a screenshot.
+- Selectable, searchable, ATS-parseable text.
+- Real `mailto:` and LinkedIn hyperlinks.
+- Mirrors the YU template (uppercase accent headings, rules, two-column rows, bullets) and follows the DOCX "real content only, no placeholders" rule.
+- Embeds the standard `Times-Roman` family for every serif choice (Georgia/Garamond/Cambria are proprietary and can't be embedded without TTFs; they map to Times-Roman in the PDF only — preview and DOCX still honour the chosen face).
+- Uses the current paper size, A4 or Letter; honours density (compact/normal) and `showRules`.
+- Filename: `{fullName}.pdf`, or `resume.pdf` if no name is present.
 
 ### DOCX
 
@@ -231,9 +240,8 @@ The app is a single route: `app/page.tsx`.
 
 ## Known Limitations / Future Work
 
-- No true multi-page PDF flow. The app warns when the resume exceeds one page, but PDF export still screenshots the preview.
+- PDF is now structured/vector (selectable, ATS-friendly), but non-default serif fonts (Georgia/Garamond/Cambria) render as Times-Roman in the PDF only.
 - No template switching.
-- No print-specific CSS.
 - No form validation.
 - No drag-and-drop reordering.
 - No import from JSON or LinkedIn.

@@ -40,9 +40,9 @@ export default function Home() {
   const handleExportPDF = useCallback(async () => {
     setExporting('pdf');
     try {
-      const { exportToPDF } = await import('./lib/exportUtils');
-      const { settings }    = useResumeStore.getState();
-      await exportToPDF(settings);
+      const { exportToPDF } = await import('./lib/resumePdf');
+      const { data: d, settings } = useResumeStore.getState();
+      await exportToPDF(d, settings);
     } finally { setExporting(null); }
   }, []);
 

@@ -2,24 +2,8 @@ import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
 import { hasSkillContent, splitSkillLabel } from './skills';
 
-export async function exportToPDF(settingsArg?: ResumeSettings) {
-  const element = document.getElementById('resume-preview');
-  if (!element) return;
-  const settings = settingsArg ?? DEFAULT_SETTINGS;
-
-  // @ts-ignore — html2pdf has no types
-  const html2pdf = (await import('html2pdf.js')).default;
-
-  const opt = {
-    margin: 0,
-    filename: 'resume.pdf',
-    image:    { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-    jsPDF:    { unit: 'in', format: settings.paperSize === 'a4' ? 'a4' : 'letter', orientation: 'portrait' as const },
-  };
-
-  html2pdf().set(opt).from(element).save();
-}
+// PDF export now lives in ./resumePdf.tsx — structured vector output with
+// selectable text and real hyperlinks. This file handles DOCX only.
 
 /**
  * Map a CSS hex like "#000000" to docx hex like "000000".
