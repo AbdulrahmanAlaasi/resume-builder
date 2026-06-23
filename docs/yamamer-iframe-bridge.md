@@ -259,6 +259,8 @@ Sent when a message cannot be processed.
 | Messages from unknown origins | `isAllowedOrigin()` check — unknown origins are silently dropped |
 | Unknown message types | Dropped silently |
 | Prototype pollution via path | `__proto__`, `constructor`, `prototype` are blocked in path parsing |
+| Arbitrary field injection | Contact / education / experience field names are checked against allowlists; unknown fields are rejected with `RESU_ERROR` |
+| Index coercion tricks | Array indices must match `^\d+$` — values like `"5abc"`, `"1.5"`, `"-1"` are rejected |
 | Code execution via messages | Only structured data is processed; no `eval` or dynamic imports |
 | Sending resume data to wrong origin | Outbound messages use the captured `event.origin`, never `'*'` for data |
 | Students opening builder directly | `isInIframe()` check — hook is completely inert outside an iframe |

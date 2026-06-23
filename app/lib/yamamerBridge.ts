@@ -92,6 +92,20 @@ const CONTACT_FIELDS = new Set<keyof ResumeData['contact']>([
   'fullName', 'phone', 'email', 'city', 'country', 'linkedin',
 ]);
 
+/** Valid per-entry field keys for education and experience updates. */
+const EDUCATION_FIELDS = new Set<string>([
+  'university', 'location', 'degree', 'graduationDate', 'relevantCoursework', 'awards',
+]);
+const EXPERIENCE_FIELDS = new Set<string>([
+  'institution', 'institutionDesc', 'location', 'jobTitle', 'startDate', 'endDate',
+]);
+
+/** Strict non-negative array index parser — rejects "5abc", "1.5", "", "-1". */
+function parseIndex(segment: string): number | null {
+  if (!/^\d+$/.test(segment)) return null;
+  return Number(segment);
+}
+
 export type FieldUpdate =
   | { kind: 'contact';            field: keyof ResumeData['contact']; value: string }
   | { kind: 'objective';          value: string }
@@ -130,65 +144,57 @@ export function resolveFieldUpdate(path: string, value: string): FieldUpdate {
 
   // education.{idx}.{field}
   if (root === 'education') {
-    const idx = parseInt(rest[0], 10);
-    if (!Number.isFinite(idx) || idx < 0) {
-      return { kind: 'error', reason: `Invalid education index: "${rest[0]}"` };
-    }
+    const idx = parseIndex(rest[0]);
+    if (idx === null) return { kind: 'error', reason: `Invalid education index: "${rest[0]}"` };
     if (!rest[1]) return { kind: 'error', reason: 'Missing education field' };
+    if (!EDUCATION_FIELDS.has(rest[1])) {
+      return { kind: 'error', reason: `Unknown education field: "${rest[1]}"` };
+    }
     return { kind: 'education', idx, field: rest[1], value };
   }
 
   // skills.{idx}
   if (root === 'skills') {
-    const idx = parseInt(rest[0], 10);
-    if (!Number.isFinite(idx) || idx < 0) {
-      return { kind: 'error', reason: `Invalid skills index: "${rest[0]}"` };
-    }
+    const idx = parseIndex(rest[0]);
+    if (idx === null) return { kind: 'error', reason: `Invalid skills index: "${rest[0]}"` };
     return { kind: 'skill', idx, value };
   }
 
   // experiences.{idx}.{field|bullets.{bulletIdx}}
   // Also accepts "projects" as a legacy alias for "experiences".
   if (root === 'experiences' || root === 'projects') {
-    const idx = parseInt(rest[0], 10);
-    if (!Number.isFinite(idx) || idx < 0) {
-      return { kind: 'error', reason: `Invalid experience index: "${rest[0]}"` };
-    }
+    const idx = parseIndex(rest[0]);
+    if (idx === null) return { kind: 'error', reason: `Invalid experience index: "${rest[0]}"` };
     if (rest[1] === 'bullets') {
-      const bulletIdx = parseInt(rest[2], 10);
-      if (!Number.isFinite(bulletIdx) || bulletIdx < 0) {
-        return { kind: 'error', reason: `Invalid bullet index: "${rest[2]}"` };
-      }
+      const bulletIdx = parseIndex(rest[2]);
+      if (bulletIdx === null) return { kind: 'error', reason: `Invalid bullet index: "${rest[2]}"` };
       return { kind: 'experienceBullet', idx, bulletIdx, value };
     }
     if (!rest[1]) return { kind: 'error', reason: 'Missing experience field' };
+    if (!EXPERIENCE_FIELDS.has(rest[1])) {
+      return { kind: 'error', reason: `Unknown experience field: "${rest[1]}"` };
+    }
     return { kind: 'experience', idx, field: rest[1], value };
   }
 
   // volunteers.{idx}
   if (root === 'volunteers') {
-    const idx = parseInt(rest[0], 10);
-    if (!Number.isFinite(idx) || idx < 0) {
-      return { kind: 'error', reason: `Invalid volunteer index: "${rest[0]}"` };
-    }
+    const idx = parseIndex(rest[0]);
+    if (idx === null) return { kind: 'error', reason: `Invalid volunteer index: "${rest[0]}"` };
     return { kind: 'volunteer', idx, value };
   }
 
   // certifications.{idx}
   if (root === 'certifications') {
-    const idx = parseInt(rest[0], 10);
-    if (!Number.isFinite(idx) || idx < 0) {
-      return { kind: 'error', reason: `Invalid certification index: "${rest[0]}"` };
-    }
+    const idx = parseIndex(rest[0]);
+    if (idx === null) return { kind: 'error', reason: `Invalid certification index: "${rest[0]}"` };
     return { kind: 'certification', idx, value };
   }
 
   // extracurriculars.{idx}
   if (root === 'extracurriculars') {
-    const idx = parseInt(rest[0], 10);
-    if (!Number.isFinite(idx) || idx < 0) {
-      return { kind: 'error', reason: `Invalid extracurricular index: "${rest[0]}"` };
-    }
+    const idx = parseIndex(rest[0]);
+    if (idx === null) return { kind: 'error', reason: `Invalid extracurricular index: "${rest[0]}"` };
     return { kind: 'extracurricular', idx, value };
   }
 
