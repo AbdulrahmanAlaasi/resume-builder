@@ -96,16 +96,21 @@ export default function Home() {
 
       <style>{`
         @media (max-width: 980px) {
+          /*
+           * Mobile = drill-down navigation. One full-screen panel at a time:
+           *   Edit tab + no section open  → section list
+           *   Edit tab + section open     → that section's form (full screen)
+           *   Preview tab                 → live preview
+           */
           .body-grid {
             grid-template-columns: 1fr !important;
-            grid-template-rows: ${mobileTab === 'edit' && detailPanelOpen ? 'minmax(210px, 34vh) minmax(0, 1fr)' : '1fr'};
+            grid-template-rows: 1fr !important;
           }
           .section-nav-panel  {
-            display: ${mobileTab === 'edit' ? 'flex' : 'none'} !important;
+            display: ${mobileTab === 'edit' && !detailPanelOpen ? 'flex' : 'none'} !important;
             width: 100% !important;
             min-width: 0 !important;
             border-right: 0 !important;
-            border-bottom: 1px solid var(--border) !important;
           }
           .builder-panel {
             display: ${mobileTab === 'edit' && detailPanelOpen ? 'flex' : 'none'} !important;
@@ -119,6 +124,8 @@ export default function Home() {
             min-height: 0 !important;
           }
           .mobile-tabs { display: flex !important; }
+          /* The back arrow only makes sense on the mobile drill-down. */
+          .builder-back-btn { display: inline-flex !important; }
         }
       `}</style>
     </div>

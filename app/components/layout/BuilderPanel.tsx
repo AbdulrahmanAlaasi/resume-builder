@@ -62,6 +62,14 @@ export default function BuilderPanel() {
       }}
     >
       <div className="builder-panel-head">
+        <button
+          type="button"
+          className="builder-back-btn"
+          onClick={closeDetailPanel}
+          aria-label="Back to sections"
+        >
+          <span aria-hidden>‹</span> Sections
+        </button>
         <div className="builder-panel-title">{label}</div>
         <button
           type="button"
