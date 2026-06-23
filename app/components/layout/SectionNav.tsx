@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 import { SECTIONS } from '../../lib/constants';
 import { CV_EXAMPLES } from '../../lib/examples';
@@ -22,13 +22,41 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
   const { activeSection, detailPanelOpen, selectSection, settings, updateSettings, loadExample } = useResumeStore();
   const [openExampleId, setOpenExampleId] = useState<string | null>(null);
   const openExample = CV_EXAMPLES.find((example) => example.id === openExampleId);
+
+  // Escape closes the example preview modal.
+  useEffect(() => {
+    if (!openExampleId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenExampleId(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [openExampleId]);
   const densityValue: Density = settings.density === 'compact' ? 'compact' : 'normal';
+
+  /** Up/Down/Home/End arrow navigation across the section buttons. */
+  const onNavKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+    if (!keys.includes(e.key)) return;
+    const buttons = Array.from(
+      e.currentTarget.querySelectorAll<HTMLButtonElement>('.section-nav-btn'),
+    );
+    const idx = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (idx === -1) return;
+    e.preventDefault();
+    let next = idx;
+    if (e.key === 'ArrowDown') next = (idx + 1) % buttons.length;
+    else if (e.key === 'ArrowUp') next = (idx - 1 + buttons.length) % buttons.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = buttons.length - 1;
+    buttons[next]?.focus();
+  };
 
   return (
     <aside className="section-nav-panel">
       <div className="section-nav-head">Resume Sections</div>
 
-      <nav className="section-nav-list">
+      <nav className="section-nav-list" aria-label="Resume sections" onKeyDown={onNavKeyDown}>
         {SECTIONS.map(({ id, label }) => {
           const isActive = detailPanelOpen && activeSection === id;
           return (
@@ -36,6 +64,7 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
               key={id}
               type="button"
               className={`section-nav-btn${isActive ? ' active' : ''}`}
+              aria-current={isActive ? 'true' : undefined}
               onClick={() => selectSection(id)}
             >
               <span>{label}</span>
@@ -82,6 +111,8 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
           max={100}
           value={Math.round(zoom * 100)}
           onChange={(e) => onZoomChange(Number(e.target.value) / 100)}
+          aria-label="Preview zoom"
+          aria-valuetext={`${Math.round(zoom * 100)} percent`}
           style={{ width: '100%', accentColor: 'var(--accent)' }}
         />
         <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: -2 }}>

@@ -91,7 +91,7 @@ export default function PreviewArea({ fileTitle, zoom }: Props) {
         padding: `16px ${PADDING_X}px`, minWidth: 0,
       }}
     >
-      <div style={{
+      <div role="status" aria-live="polite" style={{
         fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: 8, flexShrink: 0, flexWrap: 'wrap', textAlign: 'center',

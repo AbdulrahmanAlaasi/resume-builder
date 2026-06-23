@@ -33,25 +33,46 @@ export default function TopBar({
       </div>
 
       <div className="top-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div className="mobile-tabs" style={{ display: 'none', gap: 4 }}>
+        <div className="mobile-tabs" style={{ display: 'none', gap: 4 }} role="tablist" aria-label="Editor view">
           {(['edit', 'preview'] as const).map((t) => (
             <button
               key={t}
               className={`toptab ${mobileTab === t ? 'active' : ''}`}
               onClick={() => onMobileTabChange(t)}
               type="button"
+              role="tab"
+              aria-selected={mobileTab === t}
             >
               {t === 'edit' ? 'Edit' : 'Preview'}
             </button>
           ))}
         </div>
         <button className="btn-ghost" onClick={onReset} type="button">Reset</button>
-        <button className="btn-ghost" onClick={onExportDocx} disabled={!!exporting} type="button">
-          {exporting === 'docx' ? 'Exporting…' : '📝 Word'}
+        <button
+          className="btn-ghost"
+          onClick={onExportDocx}
+          disabled={!!exporting}
+          type="button"
+          aria-label="Export as Word document"
+        >
+          {exporting === 'docx' ? 'Exporting…' : <><span aria-hidden>📝</span> Word</>}
         </button>
-        <button className="btn-primary" onClick={onExportPdf} disabled={!!exporting} type="button">
-          {exporting === 'pdf' ? 'Exporting…' : '⬇ PDF'}
+        <button
+          className="btn-primary"
+          onClick={onExportPdf}
+          disabled={!!exporting}
+          type="button"
+          aria-label="Export as PDF"
+        >
+          {exporting === 'pdf' ? 'Exporting…' : <><span aria-hidden>⬇</span> PDF</>}
         </button>
+      </div>
+
+      {/* Polite live region so screen readers announce export progress. */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {exporting === 'pdf' ? 'Exporting PDF, please wait'
+          : exporting === 'docx' ? 'Exporting Word document, please wait'
+          : ''}
       </div>
     </header>
   );

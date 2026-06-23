@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
 import { SECTIONS } from '../../lib/constants';
 
@@ -37,11 +38,29 @@ export default function BuilderPanel() {
     ? 'Experience & Projects'
     : SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Contact Information';
 
+  // Escape closes the detail panel (only when focus is inside a button/header,
+  // not while typing in a field — Escape in a textarea shouldn't nuke the panel).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      closeDetailPanel();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [closeDetailPanel]);
+
   return (
-    <aside className="builder-panel" style={{
-      background: 'var(--surface)', borderRight: '1px solid var(--border)',
-      overflowY: 'auto', display: 'flex', flexDirection: 'column',
-    }}>
+    <aside
+      className="builder-panel"
+      role="region"
+      aria-label={`${label} editor`}
+      style={{
+        background: 'var(--surface)', borderRight: '1px solid var(--border)',
+        overflowY: 'auto', display: 'flex', flexDirection: 'column',
+      }}
+    >
       <div className="builder-panel-head">
         <div className="builder-panel-title">{label}</div>
         <button
