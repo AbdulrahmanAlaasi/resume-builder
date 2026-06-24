@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Resume Builder — YU Template',
   description: 'Build a professional resume based on the YU student template',
-  icons: { icon: '/favicon.png' },
+  // Favicon is provided by the App Router file convention: app/icon.png.
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
