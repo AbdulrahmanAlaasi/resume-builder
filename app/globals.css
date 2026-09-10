@@ -495,6 +495,22 @@ body { margin: 0; min-height: 100vh; }
   color: var(--text-secondary);
 }
 
+.import-progress-track {
+  width: min(220px, 80%);
+  height: 4px;
+  margin-top: 3px;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.import-progress-track > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
 .import-result {
   margin-top: 16px;
   padding: 14px;

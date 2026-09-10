@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ResumeData } from '../../types/resume';
-import type { PdfImportResult } from '../../lib/pdfImport';
+import type { PdfImportProgress, PdfImportResult } from '../../lib/pdfImport';
 
 interface Props {
   open: boolean;
@@ -17,6 +17,7 @@ export default function ImportPdfModal({ open, onCancel, onImport }: Props) {
   const [fileName, setFileName] = useState('');
   const [result, setResult] = useState<PdfImportResult | null>(null);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState<PdfImportProgress>({ label: 'Reading your CV' });
 
   useEffect(() => {
     if (!open) return;
@@ -24,6 +25,7 @@ export default function ImportPdfModal({ open, onCancel, onImport }: Props) {
     setFileName('');
     setResult(null);
     setError('');
+    setProgress({ label: 'Reading your CV' });
     requestRef.current += 1;
   }, [open]);
 
@@ -54,11 +56,14 @@ export default function ImportPdfModal({ open, onCancel, onImport }: Props) {
     setFileName(file.name);
     setResult(null);
     setError('');
+    setProgress({ label: 'Reading your CV', progress: 0 });
     setStatus('reading');
 
     try {
       const { importResumePdf } = await import('../../lib/pdfImport');
-      const parsed = await importResumePdf(file);
+      const parsed = await importResumePdf(file, (update) => {
+        if (requestRef.current === requestId) setProgress(update);
+      });
       if (requestRef.current !== requestId) return;
       setResult(parsed);
       setStatus('ready');
@@ -83,7 +88,7 @@ export default function ImportPdfModal({ open, onCancel, onImport }: Props) {
           <div>
             <div id="import-modal-title" className="import-modal-title">Import your CV</div>
             <div id="import-modal-description" className="import-modal-subtitle">
-              Upload a text-based PDF and we will detect its editable fields.
+              Upload a PDF and we will detect its editable fields.
             </div>
           </div>
           <button
@@ -119,11 +124,20 @@ export default function ImportPdfModal({ open, onCancel, onImport }: Props) {
           >
             <span className="import-dropzone-icon" aria-hidden>↑</span>
             <span className="import-dropzone-title">
-              {status === 'reading' ? 'Reading your CV…' : fileName || 'Choose a PDF CV'}
+              {status === 'reading' ? progress.label : fileName || 'Choose a PDF CV'}
             </span>
             <span className="import-dropzone-note">
-              {status === 'reading' ? 'Detecting sections and fields' : 'PDF only · up to 15 MB'}
+              {status === 'reading'
+                ? progress.progress === undefined
+                  ? 'Detecting sections and fields'
+                  : `${Math.round(progress.progress * 100)}% complete`
+                : 'PDF only · up to 15 MB'}
             </span>
+            {status === 'reading' && progress.progress !== undefined && (
+              <span className="import-progress-track" aria-hidden>
+                <span style={{ width: `${Math.max(2, progress.progress * 100)}%` }} />
+              </span>
+            )}
           </button>
 
           {status === 'ready' && result && (

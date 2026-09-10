@@ -21,6 +21,11 @@ export interface PdfImportResult {
   };
 }
 
+export interface PdfImportProgress {
+  label: string;
+  progress?: number;
+}
+
 const SECTION_ALIASES: Array<[SectionKey, string[]]> = [
   ['experience', ['professional & project experience', 'professional and project experience', 'professional experience', 'work experience', 'employment history', 'experience & projects', 'experience and projects', 'experience', 'projects', 'project']],
   ['extracurricular', ['extracurricular activities & interests', 'extracurricular activities and interests', 'activities & interests', 'activities and interests', 'extracurricular', 'interests']],
@@ -36,8 +41,8 @@ const cleanLine = (line: string) => line
   .replace(/[\t ]+/g, ' ')
   .trim();
 
-const stripBullet = (line: string) => cleanLine(line).replace(/^[•●▪◦◆■‣*+-]\s*/, '').trim();
-const isBullet = (line: string) => /^[•●▪◦◆■‣*+-]\s*/.test(cleanLine(line));
+const stripBullet = (line: string) => cleanLine(line).replace(/^[•●▪◦◆■‣«*+-]\s*/, '').trim();
+const isBullet = (line: string) => /^[•●▪◦◆■‣«*+-]\s*/.test(cleanLine(line));
 const makeId = (group: string, index: number) => `pdf-${group}-${index + 1}`;
 
 function matchSection(line: string): { key: SectionKey; remainder: string } | null {
@@ -303,7 +308,10 @@ export function parseResumeLines(lines: string[]): PdfImportResult {
   };
 }
 
-export async function importResumePdf(file: File): Promise<PdfImportResult> {
+export async function importResumePdf(
+  file: File,
+  onProgress?: (update: PdfImportProgress) => void,
+): Promise<PdfImportResult> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
@@ -314,6 +322,7 @@ export async function importResumePdf(file: File): Promise<PdfImportResult> {
     data: new Uint8Array(await file.arrayBuffer()),
     isEvalSupported: false,
   });
+  onProgress?.({ label: 'Reading your CV', progress: 0.05 });
   const pdf = await loadingTask.promise;
   const lines: string[] = [];
 
@@ -351,11 +360,73 @@ export async function importResumePdf(file: File): Promise<PdfImportResult> {
       });
       if (cleanLine(text)) lines.push(cleanLine(text));
     });
+
+    onProgress?.({
+      label: `Reading page ${pageNumber} of ${pdf.numPages}`,
+      progress: 0.05 + (pageNumber / pdf.numPages) * 0.2,
+    });
   }
 
-  if (lines.join(' ').replace(/\s/g, '').length < 40) {
-    throw new Error('No readable text was found. Please use a text-based PDF rather than a scanned image PDF.');
+  if (lines.join(' ').replace(/\s/g, '').length >= 40) {
+    const result = parseResumeLines(lines);
+    await pdf.destroy();
+    return result;
   }
 
-  return parseResumeLines(lines);
+  const pageLimit = Math.min(pdf.numPages, 5);
+  let currentOcrPage = 1;
+  onProgress?.({ label: 'Preparing text recognition', progress: 0.25 });
+  const { createWorker } = await import('tesseract.js');
+  const worker = await createWorker('eng', undefined, {
+    logger: (message) => {
+      if (message.status !== 'recognizing text' || typeof message.progress !== 'number') return;
+      onProgress?.({
+        label: `Scanning page ${currentOcrPage} of ${pageLimit}`,
+        progress: 0.25 + ((currentOcrPage - 1 + message.progress) / pageLimit) * 0.7,
+      });
+    },
+  });
+  const ocrLines: string[] = [];
+
+  try {
+    for (currentOcrPage = 1; currentOcrPage <= pageLimit; currentOcrPage += 1) {
+      onProgress?.({
+        label: `Preparing page ${currentOcrPage} of ${pageLimit}`,
+        progress: 0.25 + ((currentOcrPage - 1) / pageLimit) * 0.7,
+      });
+      const page = await pdf.getPage(currentOcrPage);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext('2d', { alpha: false });
+      if (!context) throw new Error('This browser could not prepare the PDF for scanning.');
+
+      await page.render({ canvasContext: context, viewport }).promise;
+      const recognition = await worker.recognize(canvas);
+      recognition.data.text
+        .split(/\r?\n/)
+        .map(cleanLine)
+        .filter(Boolean)
+        .forEach((line) => ocrLines.push(line));
+
+      canvas.width = 1;
+      canvas.height = 1;
+    }
+  } finally {
+    await worker.terminate();
+  }
+
+  if (ocrLines.join(' ').replace(/\s/g, '').length < 40) {
+    throw new Error('No readable text could be detected in this PDF. Try a clearer scan or a text-based PDF.');
+  }
+
+  onProgress?.({ label: 'Organizing detected fields', progress: 0.98 });
+  const result = parseResumeLines(ocrLines);
+  result.warnings.unshift('This CV was scanned with OCR. Review the imported text for recognition errors.');
+  if (pdf.numPages > pageLimit) {
+    result.warnings.push(`Only the first ${pageLimit} pages were scanned.`);
+  }
+  await pdf.destroy();
+  return result;
 }
