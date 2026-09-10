@@ -259,10 +259,13 @@ function parseExtracurricular(lines: string[]) {
   });
 }
 
-export function parseResumeLines(lines: string[]): PdfImportResult {
+export function parseResumeLines(lines: string[], documentLinks: string[] = []): PdfImportResult {
   const cleaned = lines.map(cleanLine).filter(Boolean);
   const { preamble, sections } = splitSections(cleaned);
   const contact = parseContact(preamble);
+  if (!contact.linkedin) {
+    contact.linkedin = documentLinks.find((url) => /(?:www\.)?linkedin\.com\/in\//i.test(url)) ?? '';
+  }
   const education = parseEducation(sections.get('education') ?? []);
   const skills = parseSkills(sections.get('skills') ?? []);
   const experiences = parseExperience(sections.get('experience') ?? []);
@@ -325,9 +328,16 @@ export async function importResumePdf(
   onProgress?.({ label: 'Reading your CV', progress: 0.05 });
   const pdf = await loadingTask.promise;
   const lines: string[] = [];
+  const documentLinks: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
+    const annotations = await page.getAnnotations();
+    annotations.forEach((annotation) => {
+      if ('url' in annotation && typeof annotation.url === 'string') {
+        documentLinks.push(annotation.url);
+      }
+    });
     const content = await page.getTextContent();
     const items = content.items
       .filter((item): item is typeof item & { str: string; transform: number[]; width: number } => 'str' in item && !!item.str.trim())
@@ -368,7 +378,7 @@ export async function importResumePdf(
   }
 
   if (lines.join(' ').replace(/\s/g, '').length >= 40) {
-    const result = parseResumeLines(lines);
+    const result = parseResumeLines(lines, documentLinks);
     await pdf.destroy();
     return result;
   }
@@ -422,7 +432,7 @@ export async function importResumePdf(
   }
 
   onProgress?.({ label: 'Organizing detected fields', progress: 0.98 });
-  const result = parseResumeLines(ocrLines);
+  const result = parseResumeLines(ocrLines, documentLinks);
   result.warnings.unshift('This CV was scanned with OCR. Review the imported text for recognition errors.');
   if (pdf.numPages > pageLimit) {
     result.warnings.push(`Only the first ${pageLimit} pages were scanned.`);
