@@ -203,7 +203,7 @@ function parseExperience(lines: string[]) {
       bullets.push(stripBullet(line));
     } else {
       if (bullets.length && /^[a-z(]/.test(line)) {
-        bullets[bullets.length - 1] = `${bullets.at(-1)} ${line}`.trim();
+        bullets[bullets.length - 1] = `${bullets[bullets.length - 1]} ${line}`.trim();
         continue;
       }
       if (bullets.length) flush();
@@ -304,13 +304,16 @@ export function parseResumeLines(lines: string[]): PdfImportResult {
 }
 
 export async function importResumePdf(file: File): Promise<PdfImportResult> {
-  const pdfjs = await import('pdfjs-dist');
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
+    'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
     import.meta.url,
   ).toString();
 
-  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(await file.arrayBuffer()),
+    isEvalSupported: false,
+  });
   const pdf = await loadingTask.promise;
   const lines: string[] = [];
 
@@ -329,7 +332,7 @@ export async function importResumePdf(file: File): Promise<PdfImportResult> {
 
     const pageLines: Array<{ y: number; items: typeof items }> = [];
     for (const item of items) {
-      const current = pageLines.at(-1);
+      const current = pageLines[pageLines.length - 1];
       if (!current || Math.abs(current.y - item.y) > 2.5) {
         pageLines.push({ y: item.y, items: [item] });
       } else {
