@@ -10,6 +10,7 @@ import SectionNav   from './components/layout/SectionNav';
 import BuilderPanel from './components/layout/BuilderPanel';
 import PreviewArea  from './components/layout/PreviewArea';
 import ResetModal   from './components/layout/ResetModal';
+import ImportPdfModal from './components/layout/ImportPdfModal';
 
 /**
  * App shell.
@@ -20,13 +21,14 @@ import ResetModal   from './components/layout/ResetModal';
  * of the SectionNav.
  */
 export default function Home() {
-  const { data, resetData, detailPanelOpen } = useResumeStore();
+  const { data, settings, resetData, detailPanelOpen, loadExample } = useResumeStore();
 
   // Yamamer iframe bridge — inert when not embedded in an iframe.
   useYamamerBridge();
 
   const [exporting, setExporting] = useState<null | 'pdf' | 'docx'>(null);
   const [showReset, setShowReset] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [zoom, setZoom]           = useState(1.0);
   const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit');
 
@@ -72,6 +74,7 @@ export default function Home() {
         fileTitle={fileTitle}
         mobileTab={mobileTab}
         onMobileTabChange={setMobileTab}
+        onImportPdf={() => setShowImport(true)}
         onReset={() => setShowReset(true)}
         onExportDocx={handleExportDOCX}
         onExportPdf={handleExportPDF}
@@ -92,6 +95,16 @@ export default function Home() {
         open={showReset}
         onCancel={() => setShowReset(false)}
         onConfirm={() => { resetData(); setShowReset(false); }}
+      />
+
+      <ImportPdfModal
+        open={showImport}
+        onCancel={() => setShowImport(false)}
+        onImport={(importedData) => {
+          loadExample(importedData, settings);
+          setMobileTab('edit');
+          setShowImport(false);
+        }}
       />
 
       <style>{`

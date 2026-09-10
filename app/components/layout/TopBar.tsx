@@ -4,6 +4,7 @@ interface Props {
   fileTitle: string;
   mobileTab: 'edit' | 'preview';
   onMobileTabChange: (t: 'edit' | 'preview') => void;
+  onImportPdf: () => void;
   onReset: () => void;
   onExportDocx: () => void;
   onExportPdf: () => void;
@@ -11,7 +12,7 @@ interface Props {
 }
 
 export default function TopBar({
-  fileTitle, mobileTab, onMobileTabChange, onReset, onExportDocx, onExportPdf, exporting,
+  fileTitle, mobileTab, onMobileTabChange, onImportPdf, onReset, onExportDocx, onExportPdf, exporting,
 }: Props) {
   return (
     <header className="top-bar" style={{
@@ -47,6 +48,9 @@ export default function TopBar({
             </button>
           ))}
         </div>
+        <button className="btn-ghost import-cv-btn" onClick={onImportPdf} type="button">
+          <span aria-hidden>↑</span> Import CV
+        </button>
         <button className="btn-ghost" onClick={onReset} type="button">Reset</button>
         <button
           className="btn-ghost"
