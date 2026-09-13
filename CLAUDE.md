@@ -7,6 +7,7 @@ Project guide for AI-assisted development. Keep this file in sync with the code.
 A web app for Al Yamamah University (YU) students to build a CV that matches the Career Center's approved template. Users fill in form fields, see a live A4 / US Letter preview, get a page-count warning when the CV exceeds one page, and export to PDF or DOCX.
 
 Live: `resu.alaasi.dev`
+University proposal: `resu.alaasi.dev/proposal`
 Repo: `github.com/AbdulrahmanAlaasi/resume-builder`
 
 ## Hosting & Architecture
@@ -225,7 +226,7 @@ npm run dev
 npm run build
 ```
 
-The app is a single route: `app/page.tsx`.
+The CV builder lives at `app/page.tsx`. The public university partnership proposal lives at `app/proposal/page.tsx`, with route-scoped styles in `app/proposal/proposal.module.css`.
 
 ## Important Conventions
 

@@ -3,6 +3,7 @@
 A light, responsive resume builder for Al Yamamah University (YU) students. It helps students create a CV that follows the Career Center's approved template, preview it live as an A4 or US Letter document, and export it to PDF or DOCX.
 
 Live: [resu.alaasi.dev](https://resu.alaasi.dev)
+University proposal: [resu.alaasi.dev/proposal](https://resu.alaasi.dev/proposal)
 Repo: [github.com/AbdulrahmanAlaasi/resume-builder](https://github.com/AbdulrahmanAlaasi/resume-builder)
 
 ## About
@@ -127,6 +128,8 @@ npm run build
 ```
 
 The static export is produced in `out/` for Cloudflare Pages.
+
+The public `/proposal` route presents the university partnership case, indicative commercial models, implementation plan, maintenance scope, and potential AI and platform roadmap.
 
 ## Notes
 
