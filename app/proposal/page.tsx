@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import ProposalEffects from './ProposalEffects';
 import styles from './proposal.module.css';
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ const commercialOptions = [
     price: 'SAR 12,000',
     cadence: 'one time',
     description: 'An eight-week institutional pilot for up to 500 students, focused on adoption, CV completion, and Career Center workflow fit.',
+    bestFor: 'Validating value before a long-term commitment',
     items: ['University branding and configuration', 'Pilot onboarding session', 'Usage and feedback report', 'Full pilot fee credited toward a first-year campus license'],
   },
   {
@@ -33,6 +35,7 @@ const commercialOptions = [
     price: 'SAR 48,000',
     cadence: 'per year',
     description: 'A managed service for one university, suitable for institution-wide student access and continuous product improvement.',
+    bestFor: 'University-wide access with predictable annual cost',
     items: ['Up to 5,000 active students', 'Hosting, monitoring, and routine maintenance', 'Product updates and security patches', 'Standard support and two training sessions annually'],
     featured: true,
   },
@@ -42,6 +45,7 @@ const commercialOptions = [
     price: 'SAR 12',
     cadence: 'per active student / year',
     description: 'A usage-based model for smaller institutions, individual colleges, or a phased rollout across selected programs.',
+    bestFor: 'A smaller cohort or phased college-by-college rollout',
     items: ['SAR 24,000 annual minimum', 'SAR 8,000 initial onboarding', 'Maintenance included while subscribed', 'Volume pricing available for multi-campus use'],
   },
   {
@@ -50,6 +54,7 @@ const commercialOptions = [
     price: 'From SAR 225,000',
     cadence: 'one time',
     description: 'A perpetual institutional source-code license with deployment rights, technical handover, and university-controlled hosting.',
+    bestFor: 'University-controlled hosting and long-term technical ownership',
     items: ['Source code and deployment documentation', 'Two technical knowledge-transfer sessions', 'Creator retains underlying product IP', 'Optional annual maintenance at 18% of the acquisition price'],
   },
 ];
@@ -135,22 +140,23 @@ const successMeasures = [
 export default function ProposalPage() {
   return (
     <main className={styles.page}>
+      <ProposalEffects />
       <header className={styles.header}>
         <a className={styles.brand} href="#top" aria-label="Resu proposal home">
           <img src="/logo32.png" width="30" height="30" alt="" />
           <span>Resu Proposal</span>
         </a>
         <nav className={styles.nav} aria-label="Proposal sections">
-          <a href="#solution">Solution</a>
-          <a href="#commercial">Commercial</a>
-          <a href="#features">Features</a>
-          <a href="#delivery">Delivery</a>
+          <a href="#solution" data-proposal-nav="solution">Solution</a>
+          <a href="#commercial" data-proposal-nav="commercial">Commercial</a>
+          <a href="#features" data-proposal-nav="features">Features</a>
+          <a href="#delivery" data-proposal-nav="delivery">Delivery</a>
         </nav>
         <a className={styles.headerAction} href="/">Open Resu</a>
       </header>
 
       <section className={styles.hero} id="top">
-        <div className={styles.heroInner}>
+        <div className={styles.heroInner} data-reveal>
           <p className={styles.eyebrow}>Institutional partnership proposal | September 2026</p>
           <h1>Resu</h1>
           <h2>A university-ready CV builder for every student.</h2>
@@ -162,7 +168,7 @@ export default function ProposalPage() {
             <a className={styles.secondaryAction} href="/" target="_blank" rel="noreferrer">View the live product</a>
           </div>
         </div>
-        <div className={styles.proposalMeta}>
+        <div className={styles.proposalMeta} data-reveal data-delay="1">
           <div><span>Prepared by</span><strong>Abdulrahman Alaasi</strong></div>
           <div><span>Prepared for</span><strong>University leadership &amp; Career Center</strong></div>
           <div><span>Product status</span><strong>Live and pilot-ready</strong></div>
@@ -170,7 +176,7 @@ export default function ProposalPage() {
       </section>
 
       <section className={styles.visualBand} aria-label="Resu product preview">
-        <div className={styles.visualInner}>
+        <div className={styles.visualInner} data-reveal>
           <div className={styles.browserFrame}>
             <div className={styles.browserBar}><span /><span /><span /><b>resu.alaasi.dev</b></div>
             <Image
@@ -185,9 +191,33 @@ export default function ProposalPage() {
         </div>
       </section>
 
+      <section className={styles.decisionBand} aria-labelledby="recommended-route-title">
+        <div className={styles.decisionInner}>
+          <div className={styles.decisionIntro} data-reveal>
+            <p className={styles.kicker}>The proposal in one minute</p>
+            <h2 id="recommended-route-title">Pilot first. Measure the result. Then decide how to scale.</h2>
+            <p>No long-term commitment is required to begin, and the full pilot fee is credited toward the first annual campus license.</p>
+          </div>
+          <div className={styles.decisionFlow}>
+            <article data-reveal data-delay="1">
+              <span>1</span>
+              <div><strong>Approve the pilot</strong><small>8 weeks | SAR 12,000 | Up to 500 students</small></div>
+            </article>
+            <article data-reveal data-delay="2">
+              <span>2</span>
+              <div><strong>Review the evidence</strong><small>Adoption, CV completion, quality, and advisor effort</small></div>
+            </article>
+            <article data-reveal data-delay="3">
+              <span>3</span>
+              <div><strong>Choose the next model</strong><small>Annual license, per-student access, or acquisition</small></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.section} id="solution">
         <div className={styles.sectionInner}>
-          <div className={styles.sectionIntro}>
+          <div className={styles.sectionIntro} data-reveal>
             <p className={styles.kicker}>The opportunity</p>
             <h2>Move CV support from a document template to a guided student service.</h2>
             <p>
@@ -195,17 +225,17 @@ export default function ProposalPage() {
             </p>
           </div>
           <div className={styles.valueGrid}>
-            <article>
+            <article data-reveal>
               <span>01</span>
               <h3>Consistency</h3>
               <p>Students begin from the same approved structure while retaining control of their own content.</p>
             </article>
-            <article>
+            <article data-reveal data-delay="1">
               <span>02</span>
               <h3>Advisor capacity</h3>
               <p>Built-in format and page guidance can reduce repetitive corrections before a human review.</p>
             </article>
-            <article>
+            <article data-reveal data-delay="2">
               <span>03</span>
               <h3>Employability</h3>
               <p>Examples, editable sections, and reliable exports help students produce an application-ready document.</p>
@@ -216,7 +246,7 @@ export default function ProposalPage() {
 
       <section className={`${styles.section} ${styles.softBand}`}>
         <div className={`${styles.sectionInner} ${styles.twoColumn}`}>
-          <div>
+          <div data-reveal>
             <p className={styles.kicker}>Available now</p>
             <h2>A working product, not a concept deck.</h2>
             <p className={styles.leadText}>
@@ -224,14 +254,14 @@ export default function ProposalPage() {
             </p>
             <a className={styles.textLink} href="/" target="_blank" rel="noreferrer">Launch the current version</a>
           </div>
-          <ul className={styles.checkList}>
+          <ul className={styles.checkList} data-reveal data-delay="1">
             {currentCapabilities.map((capability) => <li key={capability}>{capability}</li>)}
           </ul>
         </div>
       </section>
 
       <section className={styles.validationBand}>
-        <div className={styles.validationInner}>
+        <div className={styles.validationInner} data-reveal>
           <div className={styles.validationMark}>Market signal</div>
           <div>
             <h2>Early external interest</h2>
@@ -244,26 +274,35 @@ export default function ProposalPage() {
 
       <section className={styles.section} id="commercial">
         <div className={styles.sectionInner}>
-          <div className={styles.sectionIntro}>
+          <div className={styles.sectionIntro} data-reveal>
             <p className={styles.kicker}>Commercial framework</p>
             <h2>Choose the ownership and cost model that fits the university.</h2>
             <p>
               The recommended path is a paid pilot followed by an annual campus license. It gives the university evidence before a wider commitment and keeps hosting, maintenance, support, and product updates under one predictable fee.
             </p>
           </div>
+          <div className={styles.recommendation} data-reveal>
+            <span className={styles.liveDot} aria-hidden="true" />
+            <div>
+              <strong>Recommended route: paid pilot, then annual campus license.</strong>
+              <p>The university starts with a defined cost and cohort. If the agreed outcomes are met, the pilot fee is credited and the managed annual service begins.</p>
+            </div>
+            <a href="#contact">Approve the pilot</a>
+          </div>
           <div className={styles.pricingGrid}>
-            {commercialOptions.map((option) => (
-              <article className={`${styles.pricingCard} ${option.featured ? styles.featured : ''}`} key={option.name}>
+            {commercialOptions.map((option, index) => (
+              <article className={`${styles.pricingCard} ${option.featured ? styles.featured : ''}`} key={option.name} data-reveal data-delay={String(index % 2)}>
                 <div className={styles.priceLabel}>{option.label}</div>
                 <h3>{option.name}</h3>
                 <div className={styles.price}>{option.price}</div>
                 <div className={styles.cadence}>{option.cadence}</div>
                 <p>{option.description}</p>
+                <div className={styles.bestFor}><span>Best for</span><strong>{option.bestFor}</strong></div>
                 <ul>{option.items.map((item) => <li key={item}>{item}</li>)}</ul>
               </article>
             ))}
           </div>
-          <div className={styles.commercialNote}>
+          <div className={styles.commercialNote} data-reveal>
             <strong>Additional route:</strong> a full, exclusive purchase and assignment of the product IP can be evaluated separately after technical and legal due diligence. All figures above are indicative starting points in Saudi riyals, subject to scope and contract, and exclude VAT where applicable. See <a href="https://www.zatca.gov.sa/en/RulesRegulations/Taxes/Pages/VATLaw.aspx" target="_blank" rel="noreferrer">ZATCA VAT legislation</a>.
           </div>
         </div>
@@ -271,7 +310,7 @@ export default function ProposalPage() {
 
       <section className={`${styles.section} ${styles.featureBand}`} id="features">
         <div className={styles.sectionInner}>
-          <div className={styles.sectionIntro}>
+          <div className={styles.sectionIntro} data-reveal>
             <p className={styles.kicker}>Potential features</p>
             <h2>A roadmap that can grow from CV creation into a career-readiness platform.</h2>
             <p>
@@ -279,13 +318,13 @@ export default function ProposalPage() {
             </p>
           </div>
 
-          <div className={styles.featureHeading}>
+          <div className={styles.featureHeading} data-reveal>
             <span>AI roadmap</span>
             <h3>Student guidance with human control</h3>
           </div>
           <div className={styles.featureGrid}>
             {aiFeatures.map((feature, index) => (
-              <article className={styles.featureCard} key={feature.title}>
+              <article className={styles.featureCard} key={feature.title} data-reveal data-delay={String(index % 3)}>
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <h4>{feature.title}</h4>
                 <p>{feature.text}</p>
@@ -293,13 +332,13 @@ export default function ProposalPage() {
             ))}
           </div>
 
-          <div className={styles.featureHeading}>
+          <div className={styles.featureHeading} data-reveal>
             <span>Platform roadmap</span>
             <h3>Institutional workflow and scale</h3>
           </div>
           <div className={styles.featureGrid}>
             {platformFeatures.map((feature, index) => (
-              <article className={styles.featureCard} key={feature.title}>
+              <article className={styles.featureCard} key={feature.title} data-reveal data-delay={String(index % 3)}>
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <h4>{feature.title}</h4>
                 <p>{feature.text}</p>
@@ -311,14 +350,14 @@ export default function ProposalPage() {
 
       <section className={styles.section} id="delivery">
         <div className={styles.sectionInner}>
-          <div className={styles.sectionIntro}>
+          <div className={styles.sectionIntro} data-reveal>
             <p className={styles.kicker}>Delivery plan</p>
             <h2>A measured route to launch.</h2>
             <p>The product is ready for a controlled pilot. The exact calendar depends on university approvals, identity integration, security review, and the selected scope.</p>
           </div>
           <div className={styles.timeline}>
             {deliverySteps.map(([number, title, text]) => (
-              <article key={number}>
+              <article key={number} data-reveal>
                 <span>{number}</span>
                 <div><h3>{title}</h3><p>{text}</p></div>
               </article>
@@ -329,7 +368,7 @@ export default function ProposalPage() {
 
       <section className={`${styles.section} ${styles.softBand}`}>
         <div className={`${styles.sectionInner} ${styles.governanceGrid}`}>
-          <div>
+          <div data-reveal>
             <p className={styles.kicker}>Maintenance and support</p>
             <h2>Keep the service dependable after launch.</h2>
             <ul className={styles.simpleList}>
@@ -341,7 +380,7 @@ export default function ProposalPage() {
               <li>Major new modules scoped and priced separately</li>
             </ul>
           </div>
-          <div>
+          <div data-reveal data-delay="1">
             <p className={styles.kicker}>Privacy and governance</p>
             <h2>Designed for a university review process.</h2>
             <p className={styles.leadText}>
@@ -356,19 +395,19 @@ export default function ProposalPage() {
 
       <section className={styles.section}>
         <div className={`${styles.sectionInner} ${styles.measureGrid}`}>
-          <div>
+          <div data-reveal>
             <p className={styles.kicker}>Pilot evaluation</p>
             <h2>Measure value before scaling.</h2>
             <p className={styles.leadText}>The pilot report would compare agreed baseline information with a small set of practical adoption, quality, and service measures.</p>
           </div>
-          <ul className={styles.metricList}>
+          <ul className={styles.metricList} data-reveal data-delay="1">
             {successMeasures.map((measure, index) => <li key={measure}><span>{index + 1}</span>{measure}</li>)}
           </ul>
         </div>
       </section>
 
       <section className={styles.ctaSection} id="contact">
-        <div className={styles.ctaInner}>
+        <div className={styles.ctaInner} data-reveal>
           <p className={styles.kicker}>Recommended next step</p>
           <h2>Approve a scoped eight-week pilot.</h2>
           <p>
