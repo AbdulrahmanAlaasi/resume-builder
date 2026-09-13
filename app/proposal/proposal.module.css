@@ -399,6 +399,77 @@
   line-height: 1.6;
 }
 
+.storyBand {
+  padding: 0 max(14px, calc((100vw - 1260px) / 2)) 88px;
+  background: #fff;
+}
+
+.editorialVisual {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  background: #e9e7e2;
+}
+
+.editorialVisual::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 0;
+  height: 5px;
+  background: var(--orange);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+}
+
+.editorialVisual[data-visible='true']::after { width: 88px; }
+
+.editorialVisual img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.editorialVisual:hover img { transform: scale(1.018); }
+
+.editorialVisual figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: 170px minmax(260px, 1fr) minmax(280px, 0.8fr);
+  gap: 28px;
+  align-items: center;
+  padding: 24px 30px;
+  color: #fff;
+  background: rgba(20, 20, 20, 0.93);
+}
+
+.editorialVisual figcaption span {
+  color: #ff9b55;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.editorialVisual figcaption strong {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.editorialVisual figcaption p {
+  margin: 0;
+  color: #cecece;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.roadmapVisual { margin: 6px 0 50px; }
+
 .softBand { background: var(--warm); }
 
 .twoColumn,
@@ -826,6 +897,10 @@
   .valueGrid article + article { padding: 22px 0; border-left: 0; border-bottom: 1px solid var(--line); }
   .valueGrid article:last-child { border-bottom: 0; }
   .valueGrid h3 { margin-top: 14px; }
+  .editorialVisual figcaption {
+    grid-template-columns: 130px 1fr;
+  }
+  .editorialVisual figcaption p { grid-column: 2; }
   .twoColumn,
   .governanceGrid,
   .measureGrid { grid-template-columns: 1fr; gap: 42px; }
@@ -845,6 +920,21 @@
   .visualInner { padding: 6px; }
   .browserBar { height: 28px; }
   .section { padding: 64px 18px; }
+  .storyBand { padding: 0 0 64px; }
+  .editorialVisual img {
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    object-position: center;
+  }
+  .editorialVisual figcaption {
+    position: static;
+    display: block;
+    padding: 22px 18px 24px;
+  }
+  .editorialVisual figcaption strong { display: block; margin-top: 10px; font-size: 17px; }
+  .editorialVisual figcaption p { margin-top: 10px; }
+  .roadmapVisual { margin: 0 -18px 44px; }
+  .roadmapVisual img { object-position: 64% center; }
   .decisionBand { padding: 58px 18px; }
   .decisionFlow article { grid-template-columns: 48px 1fr; }
   .sectionIntro { margin-bottom: 30px; }
@@ -878,6 +968,7 @@
   .validationBand,
   .ctaSection { padding-top: 44px; padding-bottom: 44px; }
   .browserFrame { box-shadow: none; }
+  .editorialVisual figcaption { position: static; }
   .pricingCard,
   .featureCard,
   .validationBand,
@@ -894,5 +985,7 @@
   .primaryAction,
   .secondaryAction,
   .headerAction { transition: none; }
+  .editorialVisual img,
+  .editorialVisual::after { transition: none; }
   :global(.proposal-effects-ready) [data-reveal] { opacity: 1; transform: none; transition: none; }
 }

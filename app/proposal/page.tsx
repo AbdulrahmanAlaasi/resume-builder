@@ -244,6 +244,23 @@ export default function ProposalPage() {
         </div>
       </section>
 
+      <section className={styles.storyBand} aria-label="Resu in the university Career Center">
+        <figure className={styles.editorialVisual} data-reveal>
+          <Image
+            src="/proposal-career-center.webp"
+            width={1672}
+            height={941}
+            sizes="(max-width: 900px) 100vw, 1260px"
+            alt="University students reviewing their CVs together with a career advisor"
+          />
+          <figcaption>
+            <span>Where Resu creates value</span>
+            <strong>Students arrive prepared. Advisors focus on the guidance that matters.</strong>
+            <p>Consistent first drafts create more room for meaningful conversations about experience, strengths, and career direction.</p>
+          </figcaption>
+        </figure>
+      </section>
+
       <section className={`${styles.section} ${styles.softBand}`}>
         <div className={`${styles.sectionInner} ${styles.twoColumn}`}>
           <div data-reveal>
@@ -317,6 +334,21 @@ export default function ProposalPage() {
               These features are proposed options, not claims about the current release. They can be prioritized with the Career Center after the pilot, with AI features introduced only under university-approved privacy, quality, and human-review controls.
             </p>
           </div>
+
+          <figure className={`${styles.editorialVisual} ${styles.roadmapVisual}`} data-reveal>
+            <Image
+              src="/proposal-ai-guidance.webp"
+              width={1672}
+              height={941}
+              sizes="(max-width: 900px) 100vw, 1180px"
+              alt="A university student using a digital CV platform with guidance from an advisor"
+            />
+            <figcaption>
+              <span>Future-ready, human-led</span>
+              <strong>AI can support the student without replacing university judgment.</strong>
+              <p>Every proposed AI capability can remain transparent, editable, and governed by the university.</p>
+            </figcaption>
+          </figure>
 
           <div className={styles.featureHeading} data-reveal>
             <span>AI roadmap</span>
