@@ -207,7 +207,13 @@ All placeholder copy lives in `app/lib/placeholders.ts` as `FORM_PLACEHOLDERS`.
 
 **Publishing** upserts `site_config` row 1. The public site picks it up on next load.
 
-> **No login.** Built unauthenticated at the owner's request. Anyone with the URL can publish. To lock it down, enable Supabase Auth and swap in the LOCKED policies in section 5 of `supabase/schema.sql`.
+### Auth
+
+`app/admin/AdminGate.tsx` wraps the dashboard. States: loading → signed-out (magic-link form) → not-admin → admin. Sign-in is Supabase `signInWithOtp` redirecting to `/admin`; no passwords exist.
+
+The allowlist is `public.admins`, **keyed by email** rather than user id, so a colleague can be authorised before they've ever signed in — they get access on first login. Supabase verifies the address during the magic-link flow, so the JWT email claim is trustworthy.
+
+**The gate is convenience, not the security boundary.** Enforcement is Row-Level Security: `is_admin()` compares the JWT email claim against `admins`. Verified against the live database — with the public anon key, an unauthenticated caller can read the template and append events, but gets `0 rows` on publish and an empty array on analytics.
 
 ### Live template
 
@@ -228,9 +234,13 @@ Placeholders are special: `FORM_PLACEHOLDERS` in `placeholders.ts` is a Proxy ov
 ### Setup
 
 1. Create a Supabase project.
-2. SQL Editor → run `supabase/schema.sql`.
-3. Cloudflare Pages → env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-4. Redeploy.
+2. SQL Editor → run `supabase/schema.sql` (creates tables, RLS, and the admin allowlist).
+3. Authentication → Providers → **Email** enabled; URL Configuration → Site URL `https://resu.alaasi.dev`, Redirect URLs `https://resu.alaasi.dev/admin` and `http://localhost:3000/admin`.
+4. Add admins: `insert into public.admins (email, note) values ('you@yu.edu.sa', 'Career Center');`
+5. Cloudflare Pages → env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+6. Redeploy.
+
+Locally, the same two vars go in `.env.local` (git-ignored). Never put the database password or `service_role` key in a `NEXT_PUBLIC_*` variable — those bypass RLS and would be inlined into the public bundle.
 
 ## Theming
 
@@ -284,8 +294,8 @@ The CV builder lives at `app/page.tsx`. The public university partnership propos
 - No import from JSON or LinkedIn.
 - No undo/redo.
 - English only.
-- **`/admin` has no authentication.** Anyone with the URL can publish a template. Locked-mode RLS policies are written and commented in `supabase/schema.sql` section 5, ready to enable.
 - Student resume data is still browser-only (localStorage). Only the template and anonymous counters live in Supabase.
+- Adding/removing admins is a SQL statement (`supabase/schema.sql` section 7) — there's no UI for managing the allowlist yet.
 - Template import/export is JSON. Uploading a `.docx` to become the template is not supported — Word layout doesn't map faithfully onto the structured render model.
 
 ## Phase Status

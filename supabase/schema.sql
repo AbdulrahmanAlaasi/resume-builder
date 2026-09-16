@@ -1,15 +1,25 @@
 -- ===========================================================================
--- Resume Builder — Supabase schema
+-- Resume Builder — Supabase schema (AUTHENTICATED / LOCKED MODE)
 --
 -- Apply once: Supabase dashboard → SQL Editor → paste → Run.
 -- Safe to re-run (everything is IF NOT EXISTS / CREATE OR REPLACE).
 --
--- Two tables:
+-- Tables:
 --   site_config  — the single published template the public site reads
---   usage_events — anonymous usage counters for /admin
+--   usage_events — anonymous usage counters
+--   admins       — who is allowed to publish and read analytics
+--
+-- SECURITY MODEL
+--   • Anyone may READ site_config      (the public builder needs the template)
+--   • Anyone may INSERT usage_events   (anonymous visitors record counters)
+--   • ONLY admins may WRITE site_config or READ usage_events
+--   Enforced by Row-Level Security in the database — not by the UI. Even with
+--   the anon key (which is public by design), a non-admin cannot publish.
 --
 -- PRIVACY: usage_events stores NO resume content, names, emails, or IPs.
 -- session_id is a random per-tab UUID that cannot identify a person.
+--
+-- >>> AFTER RUNNING THIS, DO THE BOOTSTRAP IN SECTION 7 <<<
 -- ===========================================================================
 
 
@@ -36,7 +46,7 @@ create table if not exists public.usage_events (
   meta       jsonb       not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
 
-  -- Whitelist event names so an open insert policy can't be used to
+  -- Whitelist event names so the open insert policy can't be used to
   -- dump arbitrary text into the table.
   constraint usage_events_known_event check (event in (
     'page_view', 'export_pdf', 'export_docx', 'import_pdf',
@@ -54,9 +64,27 @@ create index if not exists usage_events_session_idx on public.usage_events (sess
 
 
 -- ---------------------------------------------------------------------------
--- 3. Pre-aggregated daily rollup (keeps the dashboard fast and cheap)
+-- 3. Admins — the allowlist. A row here = may publish + see analytics.
+--
+--    Keyed by EMAIL, not user id, so a person can be authorised *before*
+--    they have ever signed in. Supabase verifies the address during the
+--    magic-link flow, so the email claim in the JWT is trustworthy.
 -- ---------------------------------------------------------------------------
-create or replace view public.usage_daily as
+drop table if exists public.admins cascade;
+create table public.admins (
+  email    text primary key,
+  note     text,
+  added_at timestamptz not null default now()
+);
+
+
+-- ---------------------------------------------------------------------------
+-- 4. Daily rollup (keeps the dashboard fast and cheap)
+--    security_invoker = the caller's RLS applies, so this view cannot be
+--    used to read analytics without being an admin.
+-- ---------------------------------------------------------------------------
+create or replace view public.usage_daily
+with (security_invoker = true) as
 select
   (created_at at time zone 'UTC')::date as day,
   event,
@@ -69,79 +97,74 @@ group by 1, 2, 3, 4;
 
 
 -- ---------------------------------------------------------------------------
--- 4. Row-Level Security
---
---    >>> CURRENT MODE: OPEN (no admin login), as requested. <<<
---
---    This means ANYONE who finds /admin can publish a new template.
---    The whitelist/size constraints above limit damage, but they do not
---    stop template edits.
---
---    To lock it down later: delete the two "open" write policies below,
---    uncomment the LOCKED block in section 5, and turn on Supabase Auth.
+-- 5. Row-Level Security
 -- ---------------------------------------------------------------------------
 alter table public.site_config  enable row level security;
 alter table public.usage_events enable row level security;
+alter table public.admins       enable row level security;
 
--- Everyone may READ the published template (the public site needs this).
-drop policy if exists site_config_read on public.site_config;
+-- Helper: is the current caller an admin?
+-- Matches the verified email claim in the caller's JWT against the allowlist.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.admins a
+    where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+
+-- ---- site_config ----------------------------------------------------------
+-- Public read: the student-facing builder must load the template.
+drop policy if exists site_config_read          on public.site_config;
+drop policy if exists site_config_open_insert   on public.site_config;
+drop policy if exists site_config_open_update   on public.site_config;
+drop policy if exists site_config_admin_insert  on public.site_config;
+drop policy if exists site_config_admin_update  on public.site_config;
+
 create policy site_config_read
   on public.site_config for select
   using (true);
 
--- OPEN WRITE — replace with the LOCKED policies when auth is added.
-drop policy if exists site_config_open_insert on public.site_config;
-create policy site_config_open_insert
+-- Only admins may publish.
+create policy site_config_admin_insert
   on public.site_config for insert
-  with check (true);
+  with check (public.is_admin());
 
-drop policy if exists site_config_open_update on public.site_config;
-create policy site_config_open_update
+create policy site_config_admin_update
   on public.site_config for update
-  using (true) with check (true);
+  using (public.is_admin()) with check (public.is_admin());
 
--- Anonymous visitors may only APPEND events; they can never
--- update or delete them.
-drop policy if exists usage_events_insert on public.usage_events;
+-- ---- usage_events ---------------------------------------------------------
+drop policy if exists usage_events_insert     on public.usage_events;
+drop policy if exists usage_events_read       on public.usage_events;
+drop policy if exists usage_events_admin_read on public.usage_events;
+
+-- Anonymous visitors may only APPEND events.
 create policy usage_events_insert
   on public.usage_events for insert
   with check (true);
 
--- The dashboard needs to read counts. Events contain no personal data.
-drop policy if exists usage_events_read on public.usage_events;
-create policy usage_events_read
+-- Only admins may read them.
+create policy usage_events_admin_read
   on public.usage_events for select
-  using (true);
+  using (public.is_admin());
 
-
--- ---------------------------------------------------------------------------
--- 5. LOCKED MODE (uncomment when you add admin login)
---
---     drop policy if exists site_config_open_insert on public.site_config;
---     drop policy if exists site_config_open_update on public.site_config;
---
---     create table if not exists public.admins (
---       user_id uuid primary key references auth.users(id) on delete cascade,
---       email   text not null
---     );
---     alter table public.admins enable row level security;
---
---     create policy site_config_admin_write on public.site_config
---       for all
---       using     (exists (select 1 from public.admins a where a.user_id = auth.uid()))
---       with check(exists (select 1 from public.admins a where a.user_id = auth.uid()));
---
---     -- Also restrict analytics reads to admins:
---     drop policy if exists usage_events_read on public.usage_events;
---     create policy usage_events_admin_read on public.usage_events
---       for select
---       using (exists (select 1 from public.admins a where a.user_id = auth.uid()));
--- ---------------------------------------------------------------------------
+-- ---- admins ---------------------------------------------------------------
+-- A signed-in user may check whether *they* are an admin, and nothing else.
+-- Adding/removing admins is done from the SQL editor (section 7).
+drop policy if exists admins_self_read on public.admins;
+create policy admins_self_read
+  on public.admins for select
+  using (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
 
 
 -- ---------------------------------------------------------------------------
 -- 6. Seed the config row (no-op if it already exists)
---    The app publishes the real template from /admin; this just creates the row.
 -- ---------------------------------------------------------------------------
 insert into public.site_config (id, config)
 values (1, '{"schemaVersion": 1}'::jsonb)
@@ -149,7 +172,36 @@ on conflict (id) do nothing;
 
 
 -- ---------------------------------------------------------------------------
--- 7. Retention (optional but recommended)
+-- 7. The admin allowlist
+--
+--    Because this is keyed by email, people can be authorised before they
+--    have ever signed in — they simply get access on first magic-link login.
+--
+--    Add someone:
+--      insert into public.admins (email, note)
+--      values ('colleague@yu.edu.sa', 'Career Center')
+--      on conflict (email) do nothing;
+--
+--    Remove someone:
+--      delete from public.admins where lower(email) = lower('colleague@yu.edu.sa');
+--
+--    List:
+--      select email, note, added_at from public.admins order by added_at;
+--
+--    Supabase dashboard settings this depends on:
+--      Authentication → Providers → Email: enabled
+--      Authentication → URL Configuration:
+--        Site URL:      https://resu.alaasi.dev
+--        Redirect URLs: https://resu.alaasi.dev/admin
+--                       http://localhost:3000/admin
+-- ---------------------------------------------------------------------------
+insert into public.admins (email, note)
+values ('calmdownthemango@gmail.com', 'Owner')
+on conflict (email) do nothing;
+
+
+-- ---------------------------------------------------------------------------
+-- 8. Retention (optional but recommended)
 --    Run periodically, or schedule with pg_cron, to keep only 12 months.
 --
 --    delete from public.usage_events where created_at < now() - interval '12 months';

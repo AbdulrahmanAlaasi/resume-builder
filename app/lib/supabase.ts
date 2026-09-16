@@ -23,34 +23,50 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 /** True when both env vars were present at build time. */
 export const isSupabaseConfigured = Boolean(URL && ANON);
 
-let client: SupabaseClient | null = null;
-let attempted = false;
+/**
+ * The in-flight (or settled) client promise.
+ *
+ * This is memoised as a *promise*, not a boolean flag: several callers hit
+ * getSupabase() concurrently on first paint (config load + page-view event),
+ * and a flag would make every caller after the first receive null while the
+ * dynamic import was still resolving.
+ */
+let clientPromise: Promise<SupabaseClient | null> | null = null;
 
 /**
  * Returns the shared client, or null when Supabase isn't configured.
  * Import is dynamic so the SDK stays out of the initial bundle.
  */
-export async function getSupabase(): Promise<SupabaseClient | null> {
-  if (!isSupabaseConfigured) return null;
-  if (client) return client;
-  if (attempted && !client) return null;
+export function getSupabase(): Promise<SupabaseClient | null> {
+  if (!isSupabaseConfigured) return Promise.resolve(null);
 
-  attempted = true;
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    client = createClient(URL!, ANON!, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    return client;
-  } catch {
-    return null;
+  if (!clientPromise) {
+    clientPromise = (async () => {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        return createClient(URL!, ANON!, {
+          auth: {
+            // Admins sign in with a magic link, so the session must survive
+            // the redirect back from the email and subsequent reloads.
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
+        });
+      } catch {
+        return null;
+      }
+    })();
   }
+
+  return clientPromise;
 }
 
 /** Table names, centralised so the schema and the code can't drift apart. */
 export const TABLES = {
   siteConfig: 'site_config',
   usageEvents: 'usage_events',
+  admins: 'admins',
 } as const;
 
 /** The single config row's primary key (the table is constrained to id = 1). */

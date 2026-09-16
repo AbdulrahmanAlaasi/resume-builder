@@ -21,7 +21,20 @@ import { getSupabase, TABLES, SITE_CONFIG_ID, isSupabaseConfigured } from '../li
 import { track } from '../lib/analytics';
 import { CV_EXAMPLES } from '../lib/examples';
 import ResumePreview from '../components/preview/ResumePreview';
+import AdminGate from './AdminGate';
 import type { Density, PaperSize } from '../types/resume';
+
+/**
+ * Route entry. AdminGate handles magic-link sign-in and the admin allowlist;
+ * the dashboard below only renders for a verified admin.
+ */
+export default function AdminPage() {
+  return (
+    <AdminGate>
+      <AdminDashboard />
+    </AdminGate>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Usage types
@@ -107,7 +120,7 @@ function Panel({ title, caption, children }: {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function AdminPage() {
+function AdminDashboard() {
   const applyLocal = useConfigStore((s) => s.applyLocal);
 
   const [tab, setTab] = useState<'usage' | 'template' | 'transfer'>('usage');
@@ -313,15 +326,16 @@ export default function AdminPage() {
 
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '18px 20px 120px' }}>
 
-        {/* Security notice — unauthenticated by request */}
+        {/* Access notice */}
         <div role="note" style={{
-          border: '1px solid rgba(224, 64, 94, 0.35)', background: 'rgba(224, 64, 94, 0.08)',
+          border: '1px solid rgba(22, 164, 116, 0.35)', background: 'rgba(22, 164, 116, 0.08)',
           borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13,
           color: 'var(--text-primary)', lineHeight: 1.5,
         }}>
-          <strong>This page has no login.</strong> Anyone who knows the URL can publish a new
-          template to the live site. Don&apos;t share the link publicly. To lock it down, see
-          section 5 of <code>supabase/schema.sql</code>.
+          <strong>Admin-only.</strong> Publishing and analytics are enforced by database
+          policies, not just this page — an unauthorised visitor cannot change the template
+          even with the public API key. Add colleagues via the <code>admins</code> table
+          (section 7 of <code>supabase/schema.sql</code>).
         </div>
 
         {/* Setup notice */}
