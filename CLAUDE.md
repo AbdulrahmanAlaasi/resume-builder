@@ -284,6 +284,7 @@ The CV builder lives at `app/page.tsx`. The public university partnership propos
 6. Do not add trailing colons to resume labels/headings.
 7. Keep LinkedIn visible text as `LinkedIn`.
 8. Do not silently re-enable the separate Projects UI; use the unified Experience & Projects section.
+9. **Do not remove `pako` from `package.json`.** It looks unused, but `@react-pdf/pdfkit` deep-imports `pako/lib/zlib/*` as a bare specifier. It is only ever installed *nested* by other packages, so without an explicit top-level entry the bare import has nothing to resolve against and the Cloudflare build fails with `Module not found`. Local builds can hide this by resolving it from a stray `node_modules` in a parent/home directory.
 
 ## Known Limitations / Future Work
 
