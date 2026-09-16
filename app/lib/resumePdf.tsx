@@ -19,6 +19,9 @@ import * as React from 'react';
 import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
 import { hasSkillContent, splitSkillLabel } from './skills';
+import {
+  DEFAULT_TEMPLATE, headingFor, isSectionEnabled, type TemplateConfig,
+} from './siteConfig';
 
 const FONT = 'Times-Roman';
 
@@ -28,8 +31,15 @@ function normalizeLinkedIn(url: string): { href: string; label: string } | null 
   return { href: raw.startsWith('http') ? raw : `https://${raw}`, label: 'LinkedIn' };
 }
 
-export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings) {
+export async function exportToPDF(
+  data: ResumeData,
+  settingsArg?: ResumeSettings,
+  configArg?: TemplateConfig,
+) {
   const settings = settingsArg ?? DEFAULT_SETTINGS;
+  const config   = configArg ?? DEFAULT_TEMPLATE;
+  const L        = config.cvLabels;
+  const on       = (id: Parameters<typeof isSectionEnabled>[1]) => isSectionEnabled(config, id);
 
   const {
     Document, Page, View, Text, Link, StyleSheet, pdf,
@@ -112,7 +122,7 @@ export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings
   }
   if (cityCountry) contactParts.push(<Text key={key()}>{cityCountry}</Text>);
   if (linkedin) {
-    contactParts.push(<Link key={key()} style={styles.link} src={linkedin.href}>{linkedin.label}</Link>);
+    contactParts.push(<Link key={key()} style={styles.link} src={linkedin.href}>{L.linkedinText || linkedin.label}</Link>);
   }
   if (contactParts.length) {
     const withSeps: React.ReactNode[] = [];
@@ -125,27 +135,27 @@ export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings
   if (contact.fullName.trim() || contactParts.length) push(<Rule />);
 
   // Objective
-  if (objective.text.trim()) {
-    push(<Header text="Objective" />);
+  if (on('objective') && objective.text.trim()) {
+    push(<Header text={headingFor(config, 'objective')} />);
     push(<Text style={styles.para}>{objective.text.trim()}</Text>);
     push(<Rule />);
   }
 
   // Education
   const filledEdu = education.filter((e) => e.university.trim() || e.degree.trim());
-  if (filledEdu.length) {
-    push(<Header text="Education" />);
+  if (on('education') && filledEdu.length) {
+    push(<Header text={headingFor(config, 'education')} />);
     filledEdu.forEach((edu) => {
       push(
         <View style={styles.entry}>
           <TwoCol left={<Text style={styles.bold}>{edu.university.trim()}</Text>} right={edu.location.trim()} />
           <TwoCol
             left={<Text style={styles.italic}>{edu.degree.trim()}</Text>}
-            right={edu.graduationDate.trim() ? `Expected Graduation ${edu.graduationDate.trim()}` : ''}
+            right={edu.graduationDate.trim() ? `${L.expectedGraduation} ${edu.graduationDate.trim()}` : ''}
             rightItalic
           />
           {edu.relevantCoursework.trim() ? (
-            <Bullet><Text style={styles.bold}>Relevant Coursework </Text>{edu.relevantCoursework.trim()}</Bullet>
+            <Bullet><Text style={styles.bold}>{L.relevantCoursework} </Text>{edu.relevantCoursework.trim()}</Bullet>
           ) : null}
           {edu.awards.trim() ? <Bullet>{edu.awards.trim()}</Bullet> : null}
         </View>,
@@ -156,8 +166,8 @@ export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings
 
   // Skills
   const filledSkills = skills.map((s) => s.text).filter(hasSkillContent);
-  if (filledSkills.length) {
-    push(<Header text="Skills" />);
+  if (on('skills') && filledSkills.length) {
+    push(<Header text={headingFor(config, 'skills')} />);
     filledSkills.forEach((text) => {
       const labelled = splitSkillLabel(text.trim());
       push(labelled
@@ -169,8 +179,8 @@ export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings
 
   // Professional & Project Experience
   const filledExp = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
-  if (filledExp.length) {
-    push(<Header text="Professional & Project Experience" />);
+  if (on('experience') && filledExp.length) {
+    push(<Header text={headingFor(config, 'experience')} />);
     filledExp.forEach((exp) => {
       push(
         <View style={styles.entry}>
@@ -197,16 +207,16 @@ export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings
 
   // Volunteer
   const filledVol = volunteers.filter((v) => v.text.trim());
-  if (filledVol.length) {
-    push(<Header text="Volunteer Leadership" />);
+  if (on('volunteer') && filledVol.length) {
+    push(<Header text={headingFor(config, 'volunteer')} />);
     filledVol.forEach((v) => push(<Bullet>{v.text.trim()}</Bullet>));
     push(<Rule />);
   }
 
   // Certifications
   const filledCerts = certifications.filter((c) => c.text.trim());
-  if (filledCerts.length) {
-    push(<Header text="Certifications" />);
+  if (on('certifications') && filledCerts.length) {
+    push(<Header text={headingFor(config, 'certifications')} />);
     filledCerts.forEach((c) => push(<Bullet>{c.text.trim()}</Bullet>));
     push(<Rule />);
   }
@@ -214,13 +224,13 @@ export async function exportToPDF(data: ResumeData, settingsArg?: ResumeSettings
   // Extracurricular
   const clubs     = extracurriculars.filter((e) => e.type === 'club'     && e.text.trim());
   const interests = extracurriculars.filter((e) => e.type === 'interest' && e.text.trim());
-  if (clubs.length || interests.length) {
-    push(<Header text="Extracurricular Activities & Interests" />);
+  if (on('extracurricular') && (clubs.length || interests.length)) {
+    push(<Header text={headingFor(config, 'extracurricular')} />);
     if (clubs.length) {
-      push(<Bullet><Text style={styles.bold}>Clubs </Text>{clubs.map((c) => c.text.trim()).join('; ')}</Bullet>);
+      push(<Bullet><Text style={styles.bold}>{L.clubs} </Text>{clubs.map((c) => c.text.trim()).join('; ')}</Bullet>);
     }
     if (interests.length) {
-      push(<Bullet><Text style={styles.bold}>Interests </Text>{interests.map((i) => i.text.trim()).join('; ')}</Bullet>);
+      push(<Bullet><Text style={styles.bold}>{L.interests} </Text>{interests.map((i) => i.text.trim()).join('; ')}</Bullet>);
     }
   }
 

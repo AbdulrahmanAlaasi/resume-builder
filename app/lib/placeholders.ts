@@ -6,7 +6,7 @@
  * form label doesn't require updating these.
  */
 
-export const FORM_PLACEHOLDERS = {
+const DEFAULTS = {
   // Contact
   contactFullName: 'Abdulrahman Alaasi',
   contactPhone: '+966 55 123 4567',
@@ -57,4 +57,40 @@ export const FORM_PLACEHOLDERS = {
   extracurricularInterest: 'Reading, basketball, learning Mandarin.',
 } as const;
 
-export type FormPlaceholderKey = keyof typeof FORM_PLACEHOLDERS;
+export type FormPlaceholderKey = keyof typeof DEFAULTS;
+
+/** The built-in placeholder set — the fallback and the "reset" target. */
+export const FORM_PLACEHOLDER_DEFAULTS: Record<string, string> = { ...DEFAULTS };
+
+/**
+ * The currently-live placeholder set. Starts as the built-ins and is replaced
+ * by `setLivePlaceholders()` when the published template loads.
+ */
+let live: Record<string, string> = { ...DEFAULTS };
+
+/**
+ * Called by the config store whenever the published template changes.
+ * Keeping this a one-way push (configStore → here) avoids a circular import.
+ */
+export function setLivePlaceholders(next: Record<string, string> | undefined): void {
+  live = next ? { ...DEFAULTS, ...next } : { ...DEFAULTS };
+}
+
+/**
+ * Forms keep importing this as `P` and reading `P.contactCity`. The proxy
+ * resolves each read against the live set, so publishing new placeholder text
+ * from /admin updates every form without touching a single form component.
+ */
+export const FORM_PLACEHOLDERS: Record<FormPlaceholderKey, string> = new Proxy(
+  {} as Record<FormPlaceholderKey, string>,
+  {
+    get: (_t, key: string | symbol) =>
+      (typeof key === 'string' ? live[key] : undefined) ?? '',
+    has: (_t, key) => typeof key === 'string' && key in live,
+    ownKeys: () => Reflect.ownKeys(live),
+    getOwnPropertyDescriptor: (_t, key) =>
+      typeof key === 'string' && key in live
+        ? { value: live[key], enumerable: true, configurable: true, writable: false }
+        : undefined,
+  },
+);

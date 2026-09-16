@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useResumeStore } from './store/resumeStore';
+import { useConfigStore } from './store/configStore';
 import { useYamamerBridge } from './hooks/useYamamerBridge';
+import { track, trackPageView } from './lib/analytics';
 
 import CreditBanner from './components/layout/CreditBanner';
 import TopBar       from './components/layout/TopBar';
@@ -26,6 +28,20 @@ export default function Home() {
   // Yamamer iframe bridge — inert when not embedded in an iframe.
   useYamamerBridge();
 
+  // Pull the published template, then record an anonymous page view.
+  const loadConfig = useConfigStore((s) => s.loadConfig);
+  useEffect(() => {
+    void loadConfig().then(() => {
+      // A first-time visitor (nothing persisted yet) starts on the published
+      // default formatting. Returning students keep whatever they chose.
+      const firstVisit = !localStorage.getItem('resume-builder-data');
+      if (firstVisit) {
+        useResumeStore.getState().updateSettings(useConfigStore.getState().config.defaults);
+      }
+    });
+    trackPageView('builder');
+  }, [loadConfig]);
+
   const [exporting, setExporting] = useState<null | 'pdf' | 'docx'>(null);
   const [showReset, setShowReset] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -44,7 +60,8 @@ export default function Home() {
     try {
       const { exportToPDF } = await import('./lib/resumePdf');
       const { data: d, settings } = useResumeStore.getState();
-      await exportToPDF(d, settings);
+      await exportToPDF(d, settings, useConfigStore.getState().config);
+      track('export_pdf');
     } finally { setExporting(null); }
   }, []);
 
@@ -53,7 +70,8 @@ export default function Home() {
     try {
       const { exportToDOCX } = await import('./lib/exportUtils');
       const { settings }     = useResumeStore.getState();
-      await exportToDOCX(data, settings);
+      await exportToDOCX(data, settings, useConfigStore.getState().config);
+      track('export_docx');
     } finally { setExporting(null); }
   }, [data]);
 
@@ -94,7 +112,7 @@ export default function Home() {
       <ResetModal
         open={showReset}
         onCancel={() => setShowReset(false)}
-        onConfirm={() => { resetData(); setShowReset(false); }}
+        onConfirm={() => { resetData(); track('reset_data'); setShowReset(false); }}
       />
 
       <ImportPdfModal
@@ -102,6 +120,7 @@ export default function Home() {
         onCancel={() => setShowImport(false)}
         onImport={(importedData) => {
           loadExample(importedData, settings);
+          track('import_pdf');
           setMobileTab('edit');
           setShowImport(false);
         }}

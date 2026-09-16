@@ -2,6 +2,8 @@
 import { ResumeData, ResumeSettings } from '../../types/resume';
 import { DEFAULT_SETTINGS } from '../../lib/constants';
 import { hasSkillContent, splitSkillLabel } from '../../lib/skills';
+import { useConfigStore } from '../../store/configStore';
+import { headingFor, isSectionEnabled } from '../../lib/siteConfig';
 
 interface Props {
   data: ResumeData;
@@ -117,6 +119,8 @@ function normalizeLinkedIn(url: string): { href: string; label: string } | null 
 }
 
 export default function ResumePreview({ data, settings }: Props) {
+  // Published template (headings, labels, which sections are enabled).
+  const config = useConfigStore((st) => st.config);
   const s = buildStyles(settings ?? DEFAULT_SETTINGS);
   const { contact, objective, education, skills, experiences,
     volunteers, certifications, extracurriculars } = data;
@@ -132,19 +136,23 @@ export default function ResumePreview({ data, settings }: Props) {
   );
   if (cityCountry) contactNodes.push(<span key="c">{cityCountry}</span>);
   if (linkedin) contactNodes.push(
-    <a key="l" style={s.link} href={linkedin.href} target="_blank" rel="noopener noreferrer">{linkedin.label}</a>
+    <a key="l" style={s.link} href={linkedin.href} target="_blank" rel="noopener noreferrer">{config.cvLabels.linkedinText || linkedin.label}</a>
   );
 
-  const showObjective = !!objective.text.trim();
-  const showEducation = education.some((e) => e.university.trim() || e.degree.trim());
-  const showSkills    = skills.some((sk) => hasSkillContent(sk.text));
+  // A section renders only when it has content AND the published template
+  // still has it enabled.
+  const on = (id: Parameters<typeof isSectionEnabled>[1]) => isSectionEnabled(config, id);
+
+  const showObjective = on('objective') && !!objective.text.trim();
+  const showEducation = on('education') && education.some((e) => e.university.trim() || e.degree.trim());
+  const showSkills    = on('skills')    && skills.some((sk) => hasSkillContent(sk.text));
   const filledExp     = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
-  const showExpProj   = filledExp.length > 0;
-  const showVolunteer = volunteers.some((v) => v.text.trim());
-  const showCerts     = certifications.some((c) => c.text.trim());
+  const showExpProj   = on('experience') && filledExp.length > 0;
+  const showVolunteer = on('volunteer') && volunteers.some((v) => v.text.trim());
+  const showCerts     = on('certifications') && certifications.some((c) => c.text.trim());
   const clubs         = extracurriculars.filter((e) => e.type === 'club'     && e.text.trim());
   const interests     = extracurriculars.filter((e) => e.type === 'interest' && e.text.trim());
-  const showExtra     = clubs.length > 0 || interests.length > 0;
+  const showExtra     = on('extracurricular') && (clubs.length > 0 || interests.length > 0);
 
   const headerEmpty = !contact.fullName.trim() && contactNodes.length === 0;
 
@@ -153,7 +161,7 @@ export default function ResumePreview({ data, settings }: Props) {
 
       {/* HEADER */}
       <div style={s.name}>
-        {contact.fullName.trim() || <span style={s.placeholder}>[Your Name]</span>}
+        {contact.fullName.trim() || <span style={s.placeholder}>{config.cvLabels.namePlaceholder}</span>}
       </div>
       {contactNodes.length > 0 ? (
         <div style={s.contactLine}>
@@ -163,7 +171,7 @@ export default function ResumePreview({ data, settings }: Props) {
         </div>
       ) : (
         <div style={{ ...s.contactLine, ...s.placeholder }}>
-          [Phone] | [Email] | [City, Country] | [LinkedIn]
+          {config.cvLabels.contactPlaceholder}
         </div>
       )}
       {!headerEmpty && <div style={s.rule} />}
@@ -171,7 +179,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* OBJECTIVE */}
       {showObjective && (
         <>
-          <div style={s.sectionHeader}>OBJECTIVE</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'objective')}</div>
           <div>{objective.text}</div>
           <div style={s.rule} />
         </>
@@ -180,7 +188,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* EDUCATION */}
       {showEducation && (
         <>
-          <div style={s.sectionHeader}>EDUCATION</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'education')}</div>
           {education.filter((e) => e.university.trim() || e.degree.trim()).map((edu) => (
             <div key={edu.id} style={{ marginBottom: 6 }}>
               <div style={s.row}>
@@ -192,10 +200,10 @@ export default function ResumePreview({ data, settings }: Props) {
               <div style={s.row}>
                 <span style={{ ...s.leftCell, ...s.italicLeft }}>{edu.degree || '[Your Degree Program]'}</span>
                 <span style={s.italicRight}>
-                  {edu.graduationDate ? `Expected Graduation ${edu.graduationDate}` : ''}
+                  {edu.graduationDate ? `${config.cvLabels.expectedGraduation} ${edu.graduationDate}` : ''}
                 </span>
               </div>
-              <LabelledBullet s={s} label="Relevant Coursework" text={edu.relevantCoursework} />
+              <LabelledBullet s={s} label={config.cvLabels.relevantCoursework} text={edu.relevantCoursework} />
               <BulletList s={s} items={[edu.awards]} />
             </div>
           ))}
@@ -206,7 +214,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* SKILLS */}
       {showSkills && (
         <>
-          <div style={s.sectionHeader}>SKILLS</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'skills')}</div>
           <SkillBulletList s={s} items={skills.map((sk) => sk.text)} />
           <div style={s.rule} />
         </>
@@ -215,7 +223,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* PROFESSIONAL & PROJECT EXPERIENCE */}
       {showExpProj && (
         <>
-          <div style={s.sectionHeader}>PROFESSIONAL &amp; PROJECT EXPERIENCE</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'experience')}</div>
 
           {filledExp.map((exp) => (
             <div key={exp.id} style={{ marginBottom: 8 }}>
@@ -245,7 +253,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* VOLUNTEER */}
       {showVolunteer && (
         <>
-          <div style={s.sectionHeader}>VOLUNTEER LEADERSHIP</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'volunteer')}</div>
           <BulletList s={s} items={volunteers.map((v) => v.text)} />
           <div style={s.rule} />
         </>
@@ -254,7 +262,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* CERTIFICATIONS */}
       {showCerts && (
         <>
-          <div style={s.sectionHeader}>CERTIFICATIONS</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'certifications')}</div>
           <BulletList s={s} items={certifications.map((c) => c.text)} />
           <div style={s.rule} />
         </>
@@ -263,17 +271,17 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* EXTRACURRICULAR */}
       {showExtra && (
         <>
-          <div style={s.sectionHeader}>EXTRACURRICULAR ACTIVITIES &amp; INTERESTS</div>
+          <div style={s.sectionHeader}>{headingFor(config, 'extracurricular')}</div>
           <ul style={s.bulletList}>
             {clubs.length > 0 && (
               <li style={s.bulletItem}>
-                <span style={{ fontWeight: 700 }}>Clubs</span>{' '}
+                <span style={{ fontWeight: 700 }}>{config.cvLabels.clubs}</span>{' '}
                 {clubs.map((c) => c.text).join('; ')}
               </li>
             )}
             {interests.length > 0 && (
               <li style={s.bulletItem}>
-                <span style={{ fontWeight: 700 }}>Interests</span>{' '}
+                <span style={{ fontWeight: 700 }}>{config.cvLabels.interests}</span>{' '}
                 {interests.map((i) => i.text).join('; ')}
               </li>
             )}

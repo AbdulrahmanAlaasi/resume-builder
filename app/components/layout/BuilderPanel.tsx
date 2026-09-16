@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
-import { SECTIONS } from '../../lib/constants';
+import { useConfigStore } from '../../store/configStore';
 
 import ContactForm         from '../form/ContactForm';
 import ObjectiveForm       from '../form/ObjectiveForm';
@@ -33,10 +33,11 @@ const FORM_BY_SECTION: Record<ActiveSection, React.ComponentType> = {
  */
 export default function BuilderPanel() {
   const { activeSection, closeDetailPanel } = useResumeStore();
+  const config    = useConfigStore((s) => s.config);
   const FormComp  = FORM_BY_SECTION[activeSection] ?? ContactForm;
   const label     = activeSection === 'projects'
-    ? 'Experience & Projects'
-    : SECTIONS.find((s) => s.id === activeSection)?.label ?? 'Contact Information';
+    ? (config.sections.find((s) => s.id === 'experience')?.navLabel ?? 'Experience & Projects')
+    : config.sections.find((s) => s.id === activeSection)?.navLabel ?? 'Contact Information';
 
   // Escape closes the detail panel (only when focus is inside a button/header,
   // not while typing in a field — Escape in a textarea shouldn't nuke the panel).

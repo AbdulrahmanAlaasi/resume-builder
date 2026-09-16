@@ -1,6 +1,9 @@
 import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
 import { hasSkillContent, splitSkillLabel } from './skills';
+import {
+  DEFAULT_TEMPLATE, headingFor, isSectionEnabled, type TemplateConfig,
+} from './siteConfig';
 
 // PDF export now lives in ./resumePdf.tsx — structured vector output with
 // selectable text and real hyperlinks. This file handles DOCX only.
@@ -22,8 +25,15 @@ function normalizeLinkedIn(url: string): { href: string; label: string } | null 
   return { href, label };
 }
 
-export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSettings) {
+export async function exportToDOCX(
+  data: ResumeData,
+  settingsArg?: ResumeSettings,
+  configArg?: TemplateConfig,
+) {
   const settings = settingsArg ?? DEFAULT_SETTINGS;
+  const config   = configArg ?? DEFAULT_TEMPLATE;
+  const L        = config.cvLabels;
+  const on       = (id: Parameters<typeof isSectionEnabled>[1]) => isSectionEnabled(config, id);
   const accent   = toDocxHex(settings.accentColor);
 
   const {
@@ -182,7 +192,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
     if (contactRuns.length) contactRuns.push(sep());
     contactRuns.push(new ExternalHyperlink({
       link: linkedin.href,
-      children: [new TextRun({ text: linkedin.label, size: density.contact, font: FONT, style: 'Hyperlink' })],
+      children: [new TextRun({ text: L.linkedinText || linkedin.label, size: density.contact, font: FONT, style: 'Hyperlink' })],
     }));
   }
   if (contactRuns.length) {
@@ -196,8 +206,8 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   if (contact.fullName.trim() || contactRuns.length) children.push(HR());
 
   // Objective
-  if (objective.text.trim()) {
-    children.push(sectionTitle('Objective'));
+  if (on('objective') && objective.text.trim()) {
+    children.push(sectionTitle(headingFor(config, 'objective')));
     children.push(new Paragraph({
       alignment: AlignmentType.JUSTIFIED,
       spacing: { before: density.bulletBefore, after: density.objectiveAfter },
@@ -208,15 +218,15 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
 
   // Education
   const filledEdu = education.filter((e) => e.university.trim() || e.degree.trim());
-  if (filledEdu.length) {
-    children.push(sectionTitle('Education'));
+  if (on('education') && filledEdu.length) {
+    children.push(sectionTitle(headingFor(config, 'education')));
     filledEdu.forEach((edu) => {
       children.push(boldRow(edu.university, '', edu.location));
       children.push(italicRow(
         edu.degree,
-        edu.graduationDate ? `Expected Graduation ${edu.graduationDate}` : '',
+        edu.graduationDate ? `${L.expectedGraduation} ${edu.graduationDate}` : '',
       ));
-      if (edu.relevantCoursework.trim()) children.push(labelledBullet('Relevant Coursework', edu.relevantCoursework));
+      if (edu.relevantCoursework.trim()) children.push(labelledBullet(L.relevantCoursework, edu.relevantCoursework));
       if (edu.awards.trim()) children.push(bullet(edu.awards));
     });
     children.push(HR());
@@ -224,16 +234,16 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
 
   // Skills
   const filledSkills = skills.filter((s) => hasSkillContent(s.text));
-  if (filledSkills.length) {
-    children.push(sectionTitle('Skills'));
+  if (on('skills') && filledSkills.length) {
+    children.push(sectionTitle(headingFor(config, 'skills')));
     filledSkills.forEach((s) => children.push(skillBullet(s.text)));
     children.push(HR());
   }
 
   // Experience & Projects
   const filledExp  = experiences.filter((e) => e.institution.trim() || e.jobTitle.trim());
-  if (filledExp.length) {
-    children.push(sectionTitle('Professional & Project Experience'));
+  if (on('experience') && filledExp.length) {
+    children.push(sectionTitle(headingFor(config, 'experience')));
     filledExp.forEach((exp) => {
       children.push(boldRow(exp.institution, exp.institutionDesc, exp.location, true));
       children.push(italicRow(
@@ -247,16 +257,16 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
 
   // Volunteer
   const filledVol = volunteers.filter((v) => v.text.trim());
-  if (filledVol.length) {
-    children.push(sectionTitle('Volunteer Leadership'));
+  if (on('volunteer') && filledVol.length) {
+    children.push(sectionTitle(headingFor(config, 'volunteer')));
     filledVol.forEach((v) => children.push(bullet(v.text)));
     children.push(HR());
   }
 
   // Certifications
   const filledCerts = certifications.filter((c) => c.text.trim());
-  if (filledCerts.length) {
-    children.push(sectionTitle('Certifications'));
+  if (on('certifications') && filledCerts.length) {
+    children.push(sectionTitle(headingFor(config, 'certifications')));
     filledCerts.forEach((c) => children.push(bullet(c.text)));
     children.push(HR());
   }
@@ -264,15 +274,15 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
   // Extracurricular
   const clubs     = extracurriculars.filter((e) => e.type === 'club'     && e.text.trim());
   const interests = extracurriculars.filter((e) => e.type === 'interest' && e.text.trim());
-  if (clubs.length || interests.length) {
-    children.push(sectionTitle('Extracurricular Activities & Interests'));
+  if (on('extracurricular') && (clubs.length || interests.length)) {
+    children.push(sectionTitle(headingFor(config, 'extracurricular')));
     if (clubs.length) {
       children.push(new Paragraph({
         alignment: AlignmentType.JUSTIFIED,
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: density.bulletBefore, after: density.bulletAfter },
         children: [
-          new TextRun({ text: 'Clubs ',                        bold: true, size: density.body, font: FONT }),
+          new TextRun({ text: `${L.clubs} `,                   bold: true, size: density.body, font: FONT }),
           new TextRun({ text: clubs.map((c) => c.text).join('; '), size: density.body, font: FONT }),
         ],
       }));
@@ -283,7 +293,7 @@ export async function exportToDOCX(data: ResumeData, settingsArg?: ResumeSetting
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: density.bulletBefore, after: density.bulletAfter },
         children: [
-          new TextRun({ text: 'Interests ',                        bold: true, size: density.body, font: FONT }),
+          new TextRun({ text: `${L.interests} `,                   bold: true, size: density.body, font: FONT }),
           new TextRun({ text: interests.map((i) => i.text).join('; '), size: density.body, font: FONT }),
         ],
       }));

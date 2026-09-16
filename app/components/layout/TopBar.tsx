@@ -1,5 +1,7 @@
 'use client';
 
+import { useConfigStore } from '../../store/configStore';
+
 interface Props {
   fileTitle: string;
   mobileTab: 'edit' | 'preview';
@@ -14,6 +16,7 @@ interface Props {
 export default function TopBar({
   fileTitle, mobileTab, onMobileTabChange, onImportPdf, onReset, onExportDocx, onExportPdf, exporting,
 }: Props) {
+  const brand = useConfigStore((s) => s.config.branding);
   return (
     <header className="top-bar" style={{
       background: 'var(--surface)', borderBottom: '1px solid var(--border)',
@@ -24,8 +27,8 @@ export default function TopBar({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo32.png" alt="Resu logo" width={36} height={36} style={{ borderRadius: 8, display: 'block' }} />
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Resume Builder</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>YU Career Center · Student Template</div>
+          <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>{brand.appTitle}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{brand.appSubtitle}</div>
         </div>
       </div>
 

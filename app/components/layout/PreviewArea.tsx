@@ -1,8 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
+import { useConfigStore } from '../../store/configStore';
+import { track } from '../../lib/analytics';
 
 const ResumePreview = dynamic(
   () => import('../preview/ResumePreview'),
@@ -29,6 +31,7 @@ interface Props {
  */
 export default function PreviewArea({ fileTitle, zoom }: Props) {
   const { data, settings, detailPanelOpen } = useResumeStore();
+  const pageLimitWarning = useConfigStore((s) => s.config.branding.pageLimitWarning);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previewShellRef = useRef<HTMLDivElement | null>(null);
   const [fitScale, setFitScale] = useState(0.9);
@@ -55,6 +58,12 @@ export default function PreviewArea({ fileTitle, zoom }: Props) {
   const paper = PAPER_PX[settings.paperSize];
   const pageCount = Math.max(1, Math.ceil(contentHeight / paper.h));
   const overPageLimit = pageCount > 1;
+
+  // Count (once per session) how often CVs spill past one page — the single
+  // most useful signal for the Career Center. A number, never any content.
+  useEffect(() => {
+    if (overPageLimit) track('over_page_limit', { pages: pageCount }, { once: true });
+  }, [overPageLimit, pageCount]);
 
   useLayoutEffect(() => {
     const shell = previewShellRef.current;
@@ -115,7 +124,7 @@ export default function PreviewArea({ fileTitle, zoom }: Props) {
         </span>
         {overPageLimit && (
           <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
-            YU usually requires a 1-page CV
+            {pageLimitWarning}
           </span>
         )}
       </div>

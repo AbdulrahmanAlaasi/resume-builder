@@ -15,8 +15,8 @@ Repo: `github.com/AbdulrahmanAlaasi/resume-builder`
 - Cloudflare Pages auto-deploys from `main`.
 - `next build` produces the static `out/` directory.
 - Static export only: `output: 'export'` in `next.config.ts`.
-- No server, SSR, API routes, or backend dependency.
-- Supabase is planned for Career Center integration, but Phase 5 is paused until Career Center auth requirements are clear.
+- No server, SSR, or API routes. The browser talks to Supabase directly with the public anon key; Row-Level Security does the access control.
+- Supabase is **optional**. With no env vars the app falls back to the built-in template and skips analytics, so the site always works.
 
 ## Tech Stack
 
@@ -29,6 +29,7 @@ Repo: `github.com/AbdulrahmanAlaasi/resume-builder`
 | Zustand | 5 | State and localStorage persistence |
 | @react-pdf/renderer | 4.5 | Browser-side structured PDF export |
 | docx | 9.6 | Browser-side DOCX export |
+| @supabase/supabase-js | 2.x | Live template + anonymous usage analytics (optional) |
 
 ## File Structure
 
@@ -196,6 +197,41 @@ All placeholder copy lives in `app/lib/placeholders.ts` as `FORM_PLACEHOLDERS`.
 - Skips empty sections.
 - Filename: `{fullName}.docx`, or `resume.docx` if no name is present.
 
+## Admin Dashboard (`/admin`)
+
+`app/admin/page.tsx`. Three tabs plus a sticky publish bar.
+
+- **Usage** — anonymous counters: visits, PDF/Word exports, export rate, PDF imports, examples used, over-1-page count, mobile/desktop, embedded/direct, and a daily bar chart. 7/30/90-day ranges.
+- **Template** — edits the whole live template: default formatting, sections (reorder / rename nav label / rename CV heading / hide), CV labels, branding copy, and every placeholder. A live CV preview sits beside the editor.
+- **Import / Export** — download the template as JSON, or upload/paste one. Uploads run through `mergeTemplate()` so partial or older files still load.
+
+**Publishing** upserts `site_config` row 1. The public site picks it up on next load.
+
+> **No login.** Built unauthenticated at the owner's request. Anyone with the URL can publish. To lock it down, enable Supabase Auth and swap in the LOCKED policies in section 5 of `supabase/schema.sql`.
+
+### Live template
+
+`app/lib/siteConfig.ts` defines `TemplateConfig` and `DEFAULT_TEMPLATE` (the built-in YU template).
+`app/store/configStore.ts` loads it: built-in defaults → localStorage cache → Supabase.
+
+Consumers read the published config, so an admin edit changes all of them at once:
+`ResumePreview` (headings, CV labels, enabled sections), `SectionNav` / `BuilderPanel` (nav labels, order, visibility), `TopBar` / `CreditBanner` (branding), `PreviewArea` (page-limit warning), `resumePdf.tsx` and `exportUtils.ts` (headings + labels in PDF and DOCX).
+
+Placeholders are special: `FORM_PLACEHOLDERS` in `placeholders.ts` is a Proxy over a live map that `configStore` pushes into via `setLivePlaceholders()`. That keeps all nine form components unchanged and avoids a circular import.
+
+### Analytics
+
+`app/lib/analytics.ts` — `track(event, meta?, { once })`. Fire-and-forget; never throws; no-ops without Supabase.
+
+**Privacy contract:** no resume content, names, emails, IPs, cookies, or fingerprinting. The session id is a random UUID in `sessionStorage` that dies with the tab. `meta` accepts primitives only and is truncated. Event names are whitelisted by a DB `CHECK` constraint. This matches the commitment made publicly on `/proposal`.
+
+### Setup
+
+1. Create a Supabase project.
+2. SQL Editor → run `supabase/schema.sql`.
+3. Cloudflare Pages → env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+4. Redeploy.
+
 ## Theming
 
 Theme tokens live in `app/globals.css`.
@@ -248,7 +284,9 @@ The CV builder lives at `app/page.tsx`. The public university partnership propos
 - No import from JSON or LinkedIn.
 - No undo/redo.
 - English only.
-- No auth or persistence to server. Supabase integration is paused pending Career Center direction.
+- **`/admin` has no authentication.** Anyone with the URL can publish a template. Locked-mode RLS policies are written and commented in `supabase/schema.sql` section 5, ready to enable.
+- Student resume data is still browser-only (localStorage). Only the template and anonymous counters live in Supabase.
+- Template import/export is JSON. Uploading a `.docx` to become the template is not supported — Word layout doesn't map faithfully onto the structured render model.
 
 ## Phase Status
 

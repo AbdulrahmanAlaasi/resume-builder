@@ -1,10 +1,13 @@
 'use client';
 
+import { useConfigStore } from '../../store/configStore';
+
 /**
  * Career Center credit strip shown at the very top of the app shell.
- * Not printed on exported resumes.
+ * Wording and link are editable from /admin. Not printed on exported resumes.
  */
 export default function CreditBanner() {
+  const b = useConfigStore((s) => s.config.branding);
   return (
     <div style={{
       background: 'linear-gradient(90deg, var(--accent), var(--accent-2))',
@@ -16,16 +19,16 @@ export default function CreditBanner() {
       letterSpacing: '0.02em',
       flexShrink: 0,
     }}>
-      Built with <span style={{ color: '#ffd1d1' }}>♥</span> by{' '}
+      {b.creditPrefix} <span style={{ color: '#ffd1d1' }}>♥</span> by{' '}
       <a
-        href="https://abdulrahman.alaasi.dev/"
+        href={b.creditUrl}
         target="_blank"
         rel="noopener noreferrer"
         style={{ color: '#fff', textDecoration: 'underline', textUnderlineOffset: 2 }}
       >
-        Abdulrahman Alaasi
+        {b.creditName}
       </a>
-      &nbsp;·&nbsp;Supervised by the Career Center at YU
+      &nbsp;·&nbsp;{b.creditSuffix}
     </div>
   );
 }

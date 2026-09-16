@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useResumeStore } from '../../store/resumeStore';
-import { SECTIONS } from '../../lib/constants';
+import { useConfigStore } from '../../store/configStore';
+import { visibleSections } from '../../lib/siteConfig';
+import { track } from '../../lib/analytics';
 import { CV_EXAMPLES } from '../../lib/examples';
 import type { Density } from '../../types/resume';
 import Segmented from '../ui/Segmented';
@@ -20,6 +22,8 @@ interface Props {
  */
 export default function SectionNav({ zoom, onZoomChange }: Props) {
   const { activeSection, detailPanelOpen, selectSection, settings, updateSettings, loadExample } = useResumeStore();
+  const config = useConfigStore((s) => s.config);
+  const navSections = visibleSections(config);
   const [openExampleId, setOpenExampleId] = useState<string | null>(null);
   const openExample = CV_EXAMPLES.find((example) => example.id === openExampleId);
 
@@ -57,7 +61,7 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
       <div className="section-nav-head">Resume Sections</div>
 
       <nav className="section-nav-list" aria-label="Resume sections" onKeyDown={onNavKeyDown}>
-        {SECTIONS.map(({ id, label }) => {
+        {navSections.map(({ id, navLabel }) => {
           const isActive = detailPanelOpen && activeSection === id;
           return (
             <button
@@ -65,9 +69,9 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
               type="button"
               className={`section-nav-btn${isActive ? ' active' : ''}`}
               aria-current={isActive ? 'true' : undefined}
-              onClick={() => selectSection(id)}
+              onClick={() => { selectSection(id); track('section_opened', { section: id }); }}
             >
-              <span>{label}</span>
+              <span>{navLabel}</span>
               <span className="section-nav-chevron" aria-hidden>›</span>
             </button>
           );
@@ -160,6 +164,7 @@ export default function SectionNav({ zoom, onZoomChange }: Props) {
                 className="btn-primary"
                 onClick={() => {
                   loadExample(openExample.data, openExample.settings);
+                  track('example_loaded', { example: openExample.id });
                   setOpenExampleId(null);
                 }}
               >
