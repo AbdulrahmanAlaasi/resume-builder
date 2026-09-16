@@ -22,6 +22,7 @@ import { track } from '../lib/analytics';
 import { CV_EXAMPLES } from '../lib/examples';
 import ResumePreview from '../components/preview/ResumePreview';
 import AdminGate from './AdminGate';
+import DesignTab from './DesignTab';
 import type { Density, PaperSize } from '../types/resume';
 
 /**
@@ -123,7 +124,7 @@ function Panel({ title, caption, children }: {
 function AdminDashboard() {
   const applyLocal = useConfigStore((s) => s.applyLocal);
 
-  const [tab, setTab] = useState<'usage' | 'template' | 'transfer'>('usage');
+  const [tab, setTab] = useState<'usage' | 'design' | 'template' | 'transfer'>('usage');
   const [draft, setDraft] = useState<TemplateConfig>(DEFAULT_TEMPLATE);
   const [publishedJson, setPublishedJson] = useState<string>(JSON.stringify(DEFAULT_TEMPLATE));
   const [loadingConfig, setLoadingConfig] = useState(false);
@@ -359,8 +360,8 @@ function AdminDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="segmented" style={{ maxWidth: 420, marginBottom: 16 }}>
-          {([['usage', 'Usage'], ['template', 'Template'], ['transfer', 'Import / Export']] as const)
+        <div className="segmented" style={{ maxWidth: 520, marginBottom: 16 }}>
+          {([['usage', 'Usage'], ['design', 'Design'], ['template', 'Content'], ['transfer', 'Import / Export']] as const)
             .map(([id, label]) => (
               <button key={id} type="button" className={tab === id ? 'active' : ''}
                 onClick={() => setTab(id)}>{label}</button>
@@ -441,6 +442,11 @@ function AdminDashboard() {
               )}
             </Panel>
           </>
+        )}
+
+        {/* ---------------------------------------------------------------- */}
+        {tab === 'design' && (
+          <DesignTab draft={draft} setDraft={setDraft} sampleData={sampleData} />
         )}
 
         {/* ---------------------------------------------------------------- */}

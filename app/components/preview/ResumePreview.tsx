@@ -3,7 +3,8 @@ import { ResumeData, ResumeSettings } from '../../types/resume';
 import { DEFAULT_SETTINGS } from '../../lib/constants';
 import { hasSkillContent, splitSkillLabel } from '../../lib/skills';
 import { useConfigStore } from '../../store/configStore';
-import { headingFor, isSectionEnabled } from '../../lib/siteConfig';
+import { headingFor, isSectionEnabled, DEFAULT_TEMPLATE,
+  type TemplateConfig, type ElementKey } from '../../lib/siteConfig';
 
 interface Props {
   data: ResumeData;
@@ -15,37 +16,74 @@ interface Props {
  * the empty preview shows just the header (name + contact placeholders).
  */
 
-function buildStyles(settings: ResumeSettings) {
-  const densityMap = {
-    compact: { lineHeight: 1.18, padding: '0.55in 0.7in', sectionGap: 2, bodySize: '10.5pt' },
-    normal:  { lineHeight: 1.3,  padding: '0.75in 0.9in', sectionGap: 4, bodySize: '11pt'   },
-  } as const;
-  const d = densityMap[settings.density] ?? densityMap.normal;
-  const paper = settings.paperSize === 'a4'
+function buildStyles(settings: ResumeSettings, config: TemplateConfig) {
+  // The admin's page setup is the baseline. Choosing "normal" density adds a
+  // little size, leading and margin on top of it; "compact" uses it as-is.
+  const adj = settings.density === 'normal'
+    ? { size: 0.5, lh: 0.12, margin: 0.2, gap: 2 }
+    : { size: 0,   lh: 0,    margin: 0,   gap: 0 };
+
+  const pg        = config.page;
+  const baseFont  = pg.fontFamily || settings.fontFamily;
+  const baseSize  = pg.fontSize + adj.size;
+  const paper     = settings.paperSize === 'a4'
     ? { width: '210mm', minHeight: '297mm' }
     : { width: '8.5in', minHeight: '11in' };
 
+  /** Turn one configured element style into CSS. */
+  const css = (key: ElementKey, extra: React.CSSProperties = {}): React.CSSProperties => {
+    const el = config.elements?.[key] ?? DEFAULT_TEMPLATE.elements[key];
+    return {
+      fontFamily:     el.fontFamily || undefined,
+      // An explicit size is absolute; only inherited sizes follow density.
+      fontSize:       `${el.fontSize || baseSize}pt`,
+      fontWeight:     el.bold ? 700 : 400,
+      fontStyle:      el.italic ? 'italic' : 'normal',
+      textDecoration: el.underline ? 'underline' : 'none',
+      textTransform:  el.uppercase ? 'uppercase' : 'none',
+      color:          el.color || undefined,
+      textAlign:      el.align,
+      marginTop:      el.spaceBefore ? `${el.spaceBefore}pt` : undefined,
+      marginBottom:   el.spaceAfter  ? `${el.spaceAfter}pt`  : undefined,
+      ...extra,
+    };
+  };
+
+  const sh = config.elements?.sectionHeading ?? DEFAULT_TEMPLATE.elements.sectionHeading;
+
   return {
     page: {
-      fontFamily: settings.fontFamily,
-      fontSize: d.bodySize,
+      fontFamily: baseFont,
+      fontSize: `${baseSize}pt`,
       color: '#000',
-      lineHeight: d.lineHeight,
-      padding: d.padding,
+      lineHeight: pg.lineHeight + adj.lh,
+      padding: `${pg.marginV + adj.margin}in ${pg.marginH + adj.margin}in`,
       background: 'white',
       boxSizing: 'border-box',
       ...paper,
     } as React.CSSProperties,
-    name: { fontSize: '16pt', fontWeight: 700, textAlign: 'center' as const, marginBottom: 2 },
-    contactLine: { textAlign: 'center' as const, fontSize: '10.5pt', marginBottom: 6 },
+
     rule: settings.showRules
-      ? { borderTop: '1px solid #000', margin: '6px 0' }
+      ? { borderTop: `${pg.ruleWidth}px solid ${pg.ruleColor}`, margin: '6px 0' }
       : { margin: '6px 0' },
-    sectionHeader: {
-      fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase' as const,
-      color: settings.accentColor,
-      marginTop: d.sectionGap, marginBottom: d.sectionGap,
-    },
+
+    name:        css('name'),
+    contactLine: css('contact'),
+    sectionHeader: css('sectionHeading', {
+      // Accent colour still drives headings unless a colour is set explicitly.
+      color: sh.color || settings.accentColor,
+      marginTop:    `${sh.spaceBefore + adj.gap}pt`,
+      marginBottom: `${sh.spaceAfter  + adj.gap}pt`,
+    }),
+    university:        css('university',  { textAlign: 'left', whiteSpace: 'normal' }),
+    leftBoldUnderline: css('institution'),
+    rightBold:         css('location',    { whiteSpace: 'nowrap' }),
+    italicLeft:        css('roleTitle'),
+    italicRight:       css('dates',       { whiteSpace: 'nowrap' }),
+    body:              css('body'),
+    bulletItem:        css('bullet'),
+    inlineLabel:       css('inlineLabel', { textAlign: undefined }),
+
     row: {
       display: 'grid',
       gridTemplateColumns: 'minmax(0, 1fr) max-content',
@@ -53,16 +91,12 @@ function buildStyles(settings: ResumeSettings) {
       columnGap: 12,
     } as React.CSSProperties,
     leftCell: { minWidth: 0 } as React.CSSProperties,
-    leftBoldUnderline: { fontWeight: 700, textDecoration: 'underline' as const },
-    rightBold:         { fontWeight: 700, textAlign: 'right' as const, whiteSpace: 'nowrap' as const },
-    italicLeft:        { fontStyle: 'italic' as const },
-    italicRight:       { fontStyle: 'italic' as const, textAlign: 'right' as const, whiteSpace: 'nowrap' as const },
     bulletList: { margin: '2px 0 6px 0', paddingLeft: '0.35in' } as React.CSSProperties,
-    bulletItem: { marginBottom: 2 },
-    link:        { color: '#000', textDecoration: 'underline' } as React.CSSProperties,
+    link:        { color: 'inherit', textDecoration: 'underline' } as React.CSSProperties,
     placeholder: { color: '#888' } as React.CSSProperties,
   };
 }
+
 type S = ReturnType<typeof buildStyles>;
 
 function BulletList({ items, s }: { items: string[]; s: S }) {
@@ -70,7 +104,7 @@ function BulletList({ items, s }: { items: string[]; s: S }) {
   if (clean.length === 0) return null;
   return (
     <ul style={s.bulletList}>
-      {clean.map((t, i) => <li key={i} style={s.bulletItem}>{t}</li>)}
+      {clean.map((t, i) => <li key={i} style={s.bulletItem} data-el="bullet">{t}</li>)}
     </ul>
   );
 }
@@ -80,8 +114,8 @@ function LabelledBullet({ label, text, s }: { label: string; text: string; s: S 
   if (!clean) return null;
   return (
     <ul style={s.bulletList}>
-      <li style={s.bulletItem}>
-        <span style={{ fontWeight: 700 }}>{label}</span>{' '}
+      <li style={s.bulletItem} data-el="bullet">
+        <span style={s.inlineLabel} data-el="inlineLabel">{label}</span>{' '}
         {clean}
       </li>
     </ul>
@@ -96,10 +130,10 @@ function SkillBulletList({ items, s }: { items: string[]; s: S }) {
       {clean.map((text, i) => {
         const labelled = splitSkillLabel(text);
         return (
-          <li key={i} style={s.bulletItem}>
+          <li key={i} style={s.bulletItem} data-el="bullet">
             {labelled ? (
               <>
-                <span style={{ fontWeight: 700 }}>{labelled.label}</span>{' '}
+                <span style={s.inlineLabel} data-el="inlineLabel">{labelled.label}</span>{' '}
                 {labelled.value}
               </>
             ) : text}
@@ -121,7 +155,7 @@ function normalizeLinkedIn(url: string): { href: string; label: string } | null 
 export default function ResumePreview({ data, settings }: Props) {
   // Published template (headings, labels, which sections are enabled).
   const config = useConfigStore((st) => st.config);
-  const s = buildStyles(settings ?? DEFAULT_SETTINGS);
+  const s = buildStyles(settings ?? DEFAULT_SETTINGS, config);
   const { contact, objective, education, skills, experiences,
     volunteers, certifications, extracurriculars } = data;
 
@@ -160,17 +194,17 @@ export default function ResumePreview({ data, settings }: Props) {
     <div id="resume-preview" style={s.page}>
 
       {/* HEADER */}
-      <div style={s.name}>
+      <div style={s.name} data-el="name">
         {contact.fullName.trim() || <span style={s.placeholder}>{config.cvLabels.namePlaceholder}</span>}
       </div>
       {contactNodes.length > 0 ? (
-        <div style={s.contactLine}>
+        <div style={s.contactLine} data-el="contact">
           {contactNodes.map((node, i) => (
             <span key={i}>{node}{i < contactNodes.length - 1 ? <span> | </span> : null}</span>
           ))}
         </div>
       ) : (
-        <div style={{ ...s.contactLine, ...s.placeholder }}>
+        <div style={{ ...s.contactLine, ...s.placeholder }} data-el="contact">
           {config.cvLabels.contactPlaceholder}
         </div>
       )}
@@ -179,8 +213,8 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* OBJECTIVE */}
       {showObjective && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'objective')}</div>
-          <div>{objective.text}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'objective')}</div>
+          <div style={s.body} data-el="body">{objective.text}</div>
           <div style={s.rule} />
         </>
       )}
@@ -188,18 +222,18 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* EDUCATION */}
       {showEducation && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'education')}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'education')}</div>
           {education.filter((e) => e.university.trim() || e.degree.trim()).map((edu) => (
             <div key={edu.id} style={{ marginBottom: 6 }}>
               <div style={s.row}>
-                <span style={{ ...s.leftCell, ...s.rightBold, textAlign: 'left', whiteSpace: 'normal' }}>
+                <span style={{ ...s.leftCell, ...s.university }} data-el="university">
                   {edu.university || '[University Name]'}
                 </span>
-                <span style={s.rightBold}>{edu.location || ''}</span>
+                <span style={s.rightBold} data-el="location">{edu.location || ''}</span>
               </div>
               <div style={s.row}>
-                <span style={{ ...s.leftCell, ...s.italicLeft }}>{edu.degree || '[Your Degree Program]'}</span>
-                <span style={s.italicRight}>
+                <span style={{ ...s.leftCell, ...s.italicLeft }} data-el="roleTitle">{edu.degree || '[Your Degree Program]'}</span>
+                <span style={s.italicRight} data-el="dates">
                   {edu.graduationDate ? `${config.cvLabels.expectedGraduation} ${edu.graduationDate}` : ''}
                 </span>
               </div>
@@ -214,7 +248,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* SKILLS */}
       {showSkills && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'skills')}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'skills')}</div>
           <SkillBulletList s={s} items={skills.map((sk) => sk.text)} />
           <div style={s.rule} />
         </>
@@ -223,22 +257,22 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* PROFESSIONAL & PROJECT EXPERIENCE */}
       {showExpProj && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'experience')}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'experience')}</div>
 
           {filledExp.map((exp) => (
             <div key={exp.id} style={{ marginBottom: 8 }}>
               <div style={s.row}>
                 <span style={s.leftCell}>
-                  <span style={s.leftBoldUnderline}>{exp.institution || '[Name of Institution]'}</span>
+                  <span style={s.leftBoldUnderline} data-el="institution">{exp.institution || '[Name of Institution]'}</span>
                   {exp.institutionDesc.trim() && (
                     <span style={s.italicLeft}> ({exp.institutionDesc})</span>
                   )}
                 </span>
-                <span style={s.rightBold}>{exp.location || ''}</span>
+                <span style={s.rightBold} data-el="location">{exp.location || ''}</span>
               </div>
               <div style={s.row}>
-                <span style={{ ...s.leftCell, ...s.italicLeft }}>{exp.jobTitle || '[Job Title]'}</span>
-                <span style={s.italicRight}>
+                <span style={{ ...s.leftCell, ...s.italicLeft }} data-el="roleTitle">{exp.jobTitle || '[Job Title]'}</span>
+                <span style={s.italicRight} data-el="dates">
                   {[exp.startDate, exp.endDate].filter(Boolean).join(' – ')}
                 </span>
               </div>
@@ -253,7 +287,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* VOLUNTEER */}
       {showVolunteer && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'volunteer')}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'volunteer')}</div>
           <BulletList s={s} items={volunteers.map((v) => v.text)} />
           <div style={s.rule} />
         </>
@@ -262,7 +296,7 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* CERTIFICATIONS */}
       {showCerts && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'certifications')}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'certifications')}</div>
           <BulletList s={s} items={certifications.map((c) => c.text)} />
           <div style={s.rule} />
         </>
@@ -271,17 +305,17 @@ export default function ResumePreview({ data, settings }: Props) {
       {/* EXTRACURRICULAR */}
       {showExtra && (
         <>
-          <div style={s.sectionHeader}>{headingFor(config, 'extracurricular')}</div>
+          <div style={s.sectionHeader} data-el="sectionHeading">{headingFor(config, 'extracurricular')}</div>
           <ul style={s.bulletList}>
             {clubs.length > 0 && (
-              <li style={s.bulletItem}>
-                <span style={{ fontWeight: 700 }}>{config.cvLabels.clubs}</span>{' '}
+              <li style={s.bulletItem} data-el="bullet">
+                <span style={s.inlineLabel} data-el="inlineLabel">{config.cvLabels.clubs}</span>{' '}
                 {clubs.map((c) => c.text).join('; ')}
               </li>
             )}
             {interests.length > 0 && (
-              <li style={s.bulletItem}>
-                <span style={{ fontWeight: 700 }}>{config.cvLabels.interests}</span>{' '}
+              <li style={s.bulletItem} data-el="bullet">
+                <span style={s.inlineLabel} data-el="inlineLabel">{config.cvLabels.interests}</span>{' '}
                 {interests.map((i) => i.text).join('; ')}
               </li>
             )}

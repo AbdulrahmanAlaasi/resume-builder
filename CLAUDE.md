@@ -202,7 +202,8 @@ All placeholder copy lives in `app/lib/placeholders.ts` as `FORM_PLACEHOLDERS`.
 `app/admin/page.tsx`. Three tabs plus a sticky publish bar.
 
 - **Usage** — anonymous counters: visits, PDF/Word exports, export rate, PDF imports, examples used, over-1-page count, mobile/desktop, embedded/direct, and a daily bar chart. 7/30/90-day ranges.
-- **Template** — edits the whole live template: default formatting, sections (reorder / rename nav label / rename CV heading / hide), CV labels, branding copy, and every placeholder. A live CV preview sits beside the editor.
+- **Design** — Word-like formatting. Click any line in the CV preview (or pick from the dropdown) to select that *element type*, then format it with the ribbon: font, size, bold, italic, underline, ALL CAPS, colour, alignment and space before/after. Also a Page setup row: base font, base size, line spacing, margins and the horizontal-rule colour/thickness.
+- **Content** — edits the whole live template: default formatting, sections (reorder / rename nav label / rename CV heading / hide), CV labels, branding copy, and every placeholder. A live CV preview sits beside the editor.
 - **Import / Export** — download the template as JSON, or upload/paste one. Uploads run through `mergeTemplate()` so partial or older files still load.
 
 **Publishing** upserts `site_config` row 1. The public site picks it up on next load.
@@ -224,6 +225,22 @@ Consumers read the published config, so an admin edit changes all of them at onc
 `ResumePreview` (headings, CV labels, enabled sections), `SectionNav` / `BuilderPanel` (nav labels, order, visibility), `TopBar` / `CreditBanner` (branding), `PreviewArea` (page-limit warning), `resumePdf.tsx` and `exportUtils.ts` (headings + labels in PDF and DOCX).
 
 Placeholders are special: `FORM_PLACEHOLDERS` in `placeholders.ts` is a Proxy over a live map that `configStore` pushes into via `setLivePlaceholders()`. That keeps all nine form components unchanged and avoids a circular import.
+
+
+### Element styles (the Word model)
+
+A CV is generated from each student's data, so you cannot bold one specific word — formatting is defined per *element type*, exactly like Word's Heading 1 / Normal styles.
+
+`ElementKey` in `app/lib/siteConfig.ts` lists them: `name`, `contact`, `sectionHeading`, `institution` (bold+underlined), `university` (bold only — the YU template deliberately differs), `location`, `roleTitle`, `dates`, `body`, `bullet`, `inlineLabel`.
+
+Each carries an `ElementStyle` (fontFamily, fontSize, bold, italic, underline, uppercase, color, align, spaceBefore, spaceAfter). Sentinels: `fontSize: 0`, `fontFamily: ''` and `color: ''` all mean "inherit from `page`".
+
+All three renderers read the same styles, so the preview, the PDF and the Word file stay in sync:
+- `ResumePreview.tsx` — `buildStyles()` maps them to CSS and tags each node with `data-el`, which is what makes click-to-select work in the admin.
+- `resumePdf.tsx` — `st()` maps them to react-pdf props. Font family is still pinned to Times-Roman (see the font note in that file).
+- `exportUtils.ts` — `runOf()` maps them to docx `TextRun` props (half-points) and `alignOf()` to paragraph alignment.
+
+Density remains a student-facing control: "normal" adds +0.5pt, +0.12 line-height and +0.2in margins on top of the admin's page setup; "compact" uses it as-is. An element with an explicit `fontSize` is absolute and does not shift with density.
 
 ### Analytics
 

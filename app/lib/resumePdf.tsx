@@ -20,7 +20,8 @@ import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
 import { hasSkillContent, splitSkillLabel } from './skills';
 import {
-  DEFAULT_TEMPLATE, headingFor, isSectionEnabled, type TemplateConfig,
+  DEFAULT_TEMPLATE, headingFor, isSectionEnabled,
+  type TemplateConfig, type ElementKey,
 } from './siteConfig';
 
 const FONT = 'Times-Roman';
@@ -45,39 +46,76 @@ export async function exportToPDF(
     Document, Page, View, Text, Link, StyleSheet, pdf,
   } = await import('@react-pdf/renderer');
 
-  // ---- density-driven metrics (points; 1in = 72pt) ----
-  const d = settings.density === 'compact'
-    ? { padV: 39.6, padH: 50.4, body: 10.5, line: 1.18, gap: 4 }
-    : { padV: 54,   padH: 64.8, body: 11,   line: 1.30, gap: 7 };
+  // ---- metrics + styles from the published template (points; 1in = 72pt) ----
+  const adj = settings.density === 'normal'
+    ? { size: 0.5, lh: 0.12, margin: 0.2, gap: 2 }
+    : { size: 0,   lh: 0,    margin: 0,   gap: 0 };
 
+  const pg     = config.page;
+  const basePt = pg.fontSize + adj.size;
+  const padV   = (pg.marginV + adj.margin) * 72;
+  const padH   = (pg.marginH + adj.margin) * 72;
   const accent = /^#[0-9a-fA-F]{6}$/.test(settings.accentColor) ? settings.accentColor : '#000000';
 
+  const el = (k: ElementKey) => config.elements?.[k] ?? DEFAULT_TEMPLATE.elements[k];
+
+  /**
+   * Map one configured element style onto react-pdf style props.
+   * fontFamily is deliberately pinned to the embedded Times family — see the
+   * font note at the top of this file.
+   */
+  const st = (k: ElementKey, extra: Record<string, unknown> = {}) => {
+    const e = el(k);
+    return {
+      fontFamily: FONT,
+      fontSize: e.fontSize || basePt,
+      fontWeight: e.bold ? 'bold' : 'normal',
+      fontStyle: e.italic ? 'italic' : 'normal',
+      textDecoration: e.underline ? 'underline' : 'none',
+      textTransform: e.uppercase ? 'uppercase' : 'none',
+      color: e.color || '#000',
+      textAlign: e.align,
+      marginTop: e.spaceBefore || 0,
+      marginBottom: e.spaceAfter || 0,
+      ...extra,
+    } as Record<string, unknown>;
+  };
+
+  const shEl = el('sectionHeading');
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const styles = StyleSheet.create({
     page: {
-      fontFamily: FONT, fontSize: d.body, lineHeight: d.line, color: '#000',
-      paddingTop: d.padV, paddingBottom: d.padV, paddingLeft: d.padH, paddingRight: d.padH,
+      fontFamily: FONT, fontSize: basePt, lineHeight: pg.lineHeight + adj.lh, color: '#000',
+      paddingTop: padV, paddingBottom: padV, paddingLeft: padH, paddingRight: padH,
     },
-    name: { fontSize: 16, fontFamily: FONT, fontWeight: 'bold', textAlign: 'center', marginBottom: 2 },
-    contactLine: { fontSize: 10.5, textAlign: 'center', marginBottom: 4 },
+    name:        st('name'),
+    contactLine: st('contact'),
     link: { color: '#000', textDecoration: 'underline' },
-    rule: { borderBottomWidth: settings.showRules ? 1 : 0, borderBottomColor: '#000', marginTop: 6, marginBottom: 6 },
-    sectionHeader: {
-      fontSize: 11, fontFamily: FONT, fontWeight: 'bold', textTransform: 'uppercase',
-      color: accent, marginTop: d.gap, marginBottom: 2,
+    rule: {
+      borderBottomWidth: settings.showRules ? pg.ruleWidth : 0,
+      borderBottomColor: pg.ruleColor, marginTop: 6, marginBottom: 6,
     },
+    sectionHeader: st('sectionHeading', {
+      color: shEl.color || accent,
+      marginTop: shEl.spaceBefore + adj.gap + 2,
+      marginBottom: shEl.spaceAfter,
+    }),
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     left: { flexGrow: 1, flexShrink: 1, paddingRight: 8 },
-    right: { flexShrink: 0, textAlign: 'right' },
-    rightItalic: { flexShrink: 0, textAlign: 'right', fontStyle: 'italic' },
-    bold: { fontFamily: FONT, fontWeight: 'bold' },
-    boldUnderline: { fontFamily: FONT, fontWeight: 'bold', textDecoration: 'underline' },
-    italic: { fontFamily: FONT, fontStyle: 'italic' },
+    right:         st('location', { flexShrink: 0 }),
+    rightItalic:   st('dates',    { flexShrink: 0 }),
+    university:    st('university'),
+    inlineLabel:   st('inlineLabel', { marginTop: 0, marginBottom: 0 }),
+    boldUnderline: st('institution'),
+    italic:        st('roleTitle'),
     entry: { marginBottom: 6 },
-    para: { marginBottom: 2 },
+    para:  st('body'),
     bulletRow: { flexDirection: 'row', paddingLeft: 18, marginBottom: 2 },
     bulletDot: { width: 10 },
-    bulletText: { flexGrow: 1, flexShrink: 1 },
-  });
+    bulletText: st('bullet', { flexGrow: 1, flexShrink: 1, marginTop: 0, marginBottom: 0 }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any);
 
   // ---- small building blocks ----
   let k = 0;
@@ -148,14 +186,14 @@ export async function exportToPDF(
     filledEdu.forEach((edu) => {
       push(
         <View style={styles.entry}>
-          <TwoCol left={<Text style={styles.bold}>{edu.university.trim()}</Text>} right={edu.location.trim()} />
+          <TwoCol left={<Text style={styles.university}>{edu.university.trim()}</Text>} right={edu.location.trim()} />
           <TwoCol
             left={<Text style={styles.italic}>{edu.degree.trim()}</Text>}
             right={edu.graduationDate.trim() ? `${L.expectedGraduation} ${edu.graduationDate.trim()}` : ''}
             rightItalic
           />
           {edu.relevantCoursework.trim() ? (
-            <Bullet><Text style={styles.bold}>{L.relevantCoursework} </Text>{edu.relevantCoursework.trim()}</Bullet>
+            <Bullet><Text style={styles.inlineLabel}>{L.relevantCoursework} </Text>{edu.relevantCoursework.trim()}</Bullet>
           ) : null}
           {edu.awards.trim() ? <Bullet>{edu.awards.trim()}</Bullet> : null}
         </View>,
@@ -171,7 +209,7 @@ export async function exportToPDF(
     filledSkills.forEach((text) => {
       const labelled = splitSkillLabel(text.trim());
       push(labelled
-        ? <Bullet><Text style={styles.bold}>{labelled.label} </Text>{labelled.value}</Bullet>
+        ? <Bullet><Text style={styles.inlineLabel}>{labelled.label} </Text>{labelled.value}</Bullet>
         : <Bullet>{text.trim()}</Bullet>);
     });
     push(<Rule />);
@@ -227,10 +265,10 @@ export async function exportToPDF(
   if (on('extracurricular') && (clubs.length || interests.length)) {
     push(<Header text={headingFor(config, 'extracurricular')} />);
     if (clubs.length) {
-      push(<Bullet><Text style={styles.bold}>{L.clubs} </Text>{clubs.map((c) => c.text.trim()).join('; ')}</Bullet>);
+      push(<Bullet><Text style={styles.inlineLabel}>{L.clubs} </Text>{clubs.map((c) => c.text.trim()).join('; ')}</Bullet>);
     }
     if (interests.length) {
-      push(<Bullet><Text style={styles.bold}>{L.interests} </Text>{interests.map((i) => i.text.trim()).join('; ')}</Bullet>);
+      push(<Bullet><Text style={styles.inlineLabel}>{L.interests} </Text>{interests.map((i) => i.text.trim()).join('; ')}</Bullet>);
     }
   }
 

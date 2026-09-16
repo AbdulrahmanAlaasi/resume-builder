@@ -14,7 +14,7 @@ import type { ActiveSection, ResumeSettings } from '../types/resume';
 import { FORM_PLACEHOLDER_DEFAULTS } from './placeholders';
 
 /** Bump when the shape changes in a way old stored configs can't satisfy. */
-export const TEMPLATE_SCHEMA_VERSION = 1;
+export const TEMPLATE_SCHEMA_VERSION = 2;
 
 export interface SectionConfig {
   id: ActiveSection;
@@ -48,10 +48,70 @@ export interface BrandingConfig {
   pageLimitWarning: string;
 }
 
+/**
+ * A Word-style "paragraph style": one of these per kind of line on the CV.
+ * Changing it re-styles every line of that kind, in the preview, the PDF and
+ * the Word export at once.
+ *
+ * Sentinels: fontSize 0, fontFamily '' and color '' all mean "inherit from
+ * the page style", so an element only overrides what it explicitly sets.
+ */
+export interface ElementStyle {
+  fontFamily: string;
+  fontSize: number;          // pt, 0 = inherit
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  uppercase: boolean;
+  color: string;             // hex, '' = inherit
+  align: 'left' | 'center' | 'right' | 'justify';
+  spaceBefore: number;       // pt
+  spaceAfter: number;        // pt
+}
+
+/** Document-wide defaults, like Word's page setup + Normal style. */
+export interface PageStyle {
+  fontFamily: string;
+  fontSize: number;          // pt
+  lineHeight: number;
+  marginV: number;           // inches
+  marginH: number;           // inches
+  ruleColor: string;
+  ruleWidth: number;         // px
+}
+
+export type ElementKey =
+  | 'name' | 'contact' | 'sectionHeading' | 'institution' | 'location'
+  | 'roleTitle' | 'dates' | 'body' | 'bullet' | 'inlineLabel' | 'university';
+
+/** Human names shown in the admin style picker. */
+export const ELEMENT_LABELS: Record<ElementKey, string> = {
+  name:           'Full name',
+  contact:        'Contact line',
+  sectionHeading: 'Section heading',
+  institution:    'Institution / employer',
+  university:     'University / school',
+  location:       'Location',
+  roleTitle:      'Job title / degree',
+  dates:          'Dates',
+  body:           'Paragraph text',
+  bullet:         'Bullet text',
+  inlineLabel:    'Inline labels (Clubs, Coursework)',
+};
+
+export const ELEMENT_KEYS = Object.keys(ELEMENT_LABELS) as ElementKey[];
+
+const BASE_EL: ElementStyle = {
+  fontFamily: '', fontSize: 0, bold: false, italic: false, underline: false,
+  uppercase: false, color: '', align: 'left', spaceBefore: 0, spaceAfter: 0,
+};
+
 export interface TemplateConfig {
   schemaVersion: number;
   defaults: ResumeSettings;
   sections: SectionConfig[];
+  page: PageStyle;
+  elements: Record<ElementKey, ElementStyle>;
   cvLabels: CvLabels;
   branding: BrandingConfig;
   placeholders: Record<string, string>;
@@ -84,6 +144,32 @@ export const DEFAULT_TEMPLATE: TemplateConfig = {
     { id: 'certifications',  navLabel: 'Certifications (If Applicable)',  cvHeading: 'Certifications',                         enabled: true },
     { id: 'extracurricular', navLabel: 'Extracurricular',                 cvHeading: 'Extracurricular Activities & Interests', enabled: true },
   ],
+
+  // Page setup. These reproduce today's "compact" look exactly; choosing
+  // "normal" density adds a little size, leading and margin on top.
+  page: {
+    fontFamily: '',
+    fontSize: 10.5,
+    lineHeight: 1.18,
+    marginV: 0.55,
+    marginH: 0.7,
+    ruleColor: '#000000',
+    ruleWidth: 1,
+  },
+
+  elements: {
+    name:           { ...BASE_EL, fontSize: 16, bold: true, align: 'center', spaceAfter: 2 },
+    contact:        { ...BASE_EL, fontSize: 10.5, align: 'center', spaceAfter: 6 },
+    sectionHeading: { ...BASE_EL, fontSize: 11, bold: true, uppercase: true, spaceBefore: 2, spaceAfter: 2 },
+    institution:    { ...BASE_EL, bold: true, underline: true },
+    university:     { ...BASE_EL, bold: true },
+    location:       { ...BASE_EL, bold: true, align: 'right' },
+    roleTitle:      { ...BASE_EL, italic: true },
+    dates:          { ...BASE_EL, italic: true, align: 'right' },
+    body:           { ...BASE_EL, align: 'justify', spaceAfter: 2 },
+    bullet:         { ...BASE_EL, align: 'justify', spaceAfter: 2 },
+    inlineLabel:    { ...BASE_EL, bold: true },
+  },
 
   cvLabels: {
     expectedGraduation: 'Expected Graduation',
@@ -183,12 +269,36 @@ export function mergeTemplate(stored: unknown): TemplateConfig {
   return {
     schemaVersion: TEMPLATE_SCHEMA_VERSION,
     defaults: { ...d.defaults, ...(isPlainObject(s.defaults) ? s.defaults : {}) },
+    page: { ...d.page, ...(isPlainObject(s.page) ? s.page : {}) },
+    elements: mergeElements(s.elements),
     cvLabels: { ...d.cvLabels, ...(isPlainObject(s.cvLabels) ? s.cvLabels : {}) },
     branding: { ...d.branding, ...(isPlainObject(s.branding) ? s.branding : {}) },
     sections: sections.length ? sections : d.sections,
     placeholders,
     fontChoices:   fontChoices.length   ? fontChoices   : d.fontChoices,
     accentChoices: accentChoices.length ? accentChoices : d.accentChoices,
+  };
+}
+
+
+/** Merge stored element styles over the built-ins, key by key. */
+function mergeElements(stored: unknown): Record<ElementKey, ElementStyle> {
+  const out = {} as Record<ElementKey, ElementStyle>;
+  const src = isPlainObject(stored) ? stored : {};
+  for (const key of ELEMENT_KEYS) {
+    const raw = (src as Record<string, unknown>)[key];
+    out[key] = { ...DEFAULT_TEMPLATE.elements[key], ...(isPlainObject(raw) ? raw : {}) };
+  }
+  return out;
+}
+
+/** Resolve an element's effective style against the page style. */
+export function resolveStyle(config: TemplateConfig, key: ElementKey) {
+  const el = config.elements[key] ?? DEFAULT_TEMPLATE.elements[key];
+  return {
+    ...el,
+    fontFamily: el.fontFamily || config.page.fontFamily,
+    fontSize: el.fontSize || config.page.fontSize,
   };
 }
 

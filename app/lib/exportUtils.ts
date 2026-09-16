@@ -2,7 +2,8 @@ import { ResumeData, ResumeSettings } from '../types/resume';
 import { DEFAULT_SETTINGS } from './constants';
 import { hasSkillContent, splitSkillLabel } from './skills';
 import {
-  DEFAULT_TEMPLATE, headingFor, isSectionEnabled, type TemplateConfig,
+  DEFAULT_TEMPLATE, headingFor, isSectionEnabled,
+  type TemplateConfig, type ElementKey,
 } from './siteConfig';
 
 // PDF export now lives in ./resumePdf.tsx — structured vector output with
@@ -69,10 +70,44 @@ export async function exportToDOCX(
     },
   } as const;
   const density = DOCX_DENSITY[settings.density] ?? DOCX_DENSITY.normal;
+
+  // ---- published element styles -> docx run/paragraph props ----
+  const adjPt  = settings.density === 'normal' ? 0.5 : 0;
+  const basePt = config.page.fontSize + adjPt;
+  const el = (k: ElementKey) => config.elements?.[k] ?? DEFAULT_TEMPLATE.elements[k];
+
+  /** docx sizes are half-points, colours are RRGGBB with no leading '#'. */
+  const runOf = (k: ElementKey, extra: Record<string, unknown> = {}) => {
+    const e = el(k);
+    return {
+      font: FONT,
+      size: Math.round((e.fontSize || basePt) * 2),
+      bold: e.bold,
+      italics: e.italic,
+      underline: e.underline ? { type: UnderlineType.SINGLE } : undefined,
+      allCaps: e.uppercase,
+      color: (e.color || '#000000').replace('#', '').toUpperCase(),
+      ...extra,
+    };
+  };
+
+  const alignOf = (k: ElementKey) => ({
+    left:    AlignmentType.LEFT,
+    center:  AlignmentType.CENTER,
+    right:   AlignmentType.RIGHT,
+    justify: AlignmentType.JUSTIFIED,
+  }[el(k).align]);
+
+  const pageMargin = {
+    top:    Math.round(config.page.marginV * 1440),
+    bottom: Math.round(config.page.marginV * 1440),
+    left:   Math.round(config.page.marginH * 1440),
+    right:  Math.round(config.page.marginH * 1440),
+  };
   const pageSize = settings.paperSize === 'a4'
     ? { width: 11906, height: 16838 }
     : { width: 12240, height: 15840 };
-  const textWidth = pageSize.width - density.margin.left - density.margin.right;
+  const textWidth = pageSize.width - pageMargin.left - pageMargin.right;
 
   const { contact, objective, education, skills, experiences,
     volunteers, certifications, extracurriculars } = data;
@@ -92,25 +127,25 @@ export async function exportToDOCX(
   const sectionTitle = (text: string, suffix = '') => new Paragraph({
     spacing: { before: density.sectionBefore, after: density.sectionAfter },
     children: [
-      new TextRun({ text: text.toUpperCase(), bold: true, size: density.heading, font: FONT, color: accent }),
-      ...(suffix ? [new TextRun({ text: ' ' + suffix, bold: false, size: density.heading, font: FONT, color: accent })] : []),
+      new TextRun({ ...runOf('sectionHeading', { color: (el('sectionHeading').color || accent).replace('#', '').toUpperCase() }), text }),
+      ...(suffix ? [new TextRun({ ...runOf('sectionHeading', { bold: false, color: (el('sectionHeading').color || accent).replace('#', '').toUpperCase() }), text: ' ' + suffix })] : []),
     ],
   });
 
   const bullet = (text: string) => new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
+    alignment: alignOf('bullet'),
     numbering: { reference: 'bullets', level: 0 },
     spacing:   { before: density.bulletBefore, after: density.bulletAfter },
-    children:  [new TextRun({ text, size: density.body, font: FONT })],
+    children:  [new TextRun({ ...runOf('bullet'), text })],
   });
 
   const labelledBullet = (label: string, text: string) => new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
+    alignment: alignOf('bullet'),
     numbering: { reference: 'bullets', level: 0 },
     spacing:   { before: density.bulletBefore, after: density.bulletAfter },
     children: [
-      new TextRun({ text: label + ' ', bold: true, size: density.body, font: FONT }),
-      new TextRun({ text, size: density.body, font: FONT }),
+      new TextRun({ ...runOf('inlineLabel'), text: label + ' ' }),
+      new TextRun({ ...runOf('bullet'), text }),
     ],
   });
 
@@ -119,12 +154,12 @@ export async function exportToDOCX(
     if (!labelled) return bullet(text);
 
     return new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: alignOf('bullet'),
       numbering: { reference: 'bullets', level: 0 },
       spacing:   { before: density.bulletBefore, after: density.bulletAfter },
       children: [
-        new TextRun({ text: labelled.label + ' ', bold: true, size: density.body, font: FONT }),
-        new TextRun({ text: labelled.value, size: density.body, font: FONT }),
+        new TextRun({ ...runOf('inlineLabel'), text: labelled.label + ' ' }),
+        new TextRun({ ...runOf('bullet'), text: labelled.value }),
       ],
     });
   };
@@ -139,11 +174,11 @@ export async function exportToDOCX(
       spacing: { before: density.rowBefore, after: 0 },
       children: [
         new TextRun({
-          text: left, bold: true, size: density.body, font: FONT,
+          ...runOf(underline ? 'institution' : 'university'), text: left,
           ...(underline ? { underline: { type: UnderlineType.SINGLE } } : {}),
         }),
         ...(leftDescItalic ? [new TextRun({ text: ' (' + leftDescItalic + ')', italics: true, size: density.desc, font: FONT })] : []),
-        new TextRun({ text: right ? `\t${right}` : '', bold: true, size: density.body, font: FONT }),
+        new TextRun({ ...runOf('location'), text: right ? `	${right}` : '' }),
       ],
     });
 
@@ -152,8 +187,8 @@ export async function exportToDOCX(
     tabStops,
     spacing: { before: 0, after: density.italicAfter },
     children: [
-      new TextRun({ text: left,  italics: true, size: density.body, font: FONT }),
-      new TextRun({ text: right ? `\t${right}` : '', italics: true, size: density.body, font: FONT }),
+      new TextRun({ ...runOf('roleTitle'), text: left }),
+      new TextRun({ ...runOf('dates'), text: right ? `	${right}` : '' }),
     ],
   });
 
@@ -164,9 +199,9 @@ export async function exportToDOCX(
   // Name (centred, bold, larger)
   if (contact.fullName.trim()) {
     children.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
+      alignment: alignOf('name'),
       spacing: { before: 0, after: density.nameAfter },
-      children: [new TextRun({ text: contact.fullName, bold: true, size: density.name, font: FONT })],
+      children: [new TextRun({ ...runOf('name'), text: contact.fullName })],
     }));
   }
 
@@ -174,30 +209,30 @@ export async function exportToDOCX(
   const linkedin = normalizeLinkedIn(contact.linkedin);
   const cityCountry = [contact.city, contact.country].filter(Boolean).join(', ');
   const contactRuns: any[] = [];
-  const sep = () => new TextRun({ text: ' | ', size: density.contact, font: FONT });
+  const sep = () => new TextRun({ ...runOf('contact'), text: ' | ' });
 
-  if (contact.phone.trim()) contactRuns.push(new TextRun({ text: contact.phone, size: density.contact, font: FONT }));
+  if (contact.phone.trim()) contactRuns.push(new TextRun({ ...runOf('contact'), text: contact.phone }));
   if (contact.email.trim()) {
     if (contactRuns.length) contactRuns.push(sep());
     contactRuns.push(new ExternalHyperlink({
       link: `mailto:${contact.email.trim()}`,
-      children: [new TextRun({ text: contact.email, size: density.contact, font: FONT, style: 'Hyperlink' })],
+      children: [new TextRun({ ...runOf('contact'), text: contact.email, style: 'Hyperlink' })],
     }));
   }
   if (cityCountry) {
     if (contactRuns.length) contactRuns.push(sep());
-    contactRuns.push(new TextRun({ text: cityCountry, size: density.contact, font: FONT }));
+    contactRuns.push(new TextRun({ ...runOf('contact'), text: cityCountry }));
   }
   if (linkedin) {
     if (contactRuns.length) contactRuns.push(sep());
     contactRuns.push(new ExternalHyperlink({
       link: linkedin.href,
-      children: [new TextRun({ text: L.linkedinText || linkedin.label, size: density.contact, font: FONT, style: 'Hyperlink' })],
+      children: [new TextRun({ ...runOf('contact'), text: L.linkedinText || linkedin.label, style: 'Hyperlink' })],
     }));
   }
   if (contactRuns.length) {
     children.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
+      alignment: alignOf('contact'),
       spacing: { before: 0, after: density.contactAfter },
       children: contactRuns,
     }));
@@ -209,9 +244,9 @@ export async function exportToDOCX(
   if (on('objective') && objective.text.trim()) {
     children.push(sectionTitle(headingFor(config, 'objective')));
     children.push(new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: alignOf('bullet'),
       spacing: { before: density.bulletBefore, after: density.objectiveAfter },
-      children: [new TextRun({ text: objective.text, size: density.body, font: FONT })],
+      children: [new TextRun({ ...runOf('body'), text: objective.text })],
     }));
     children.push(HR());
   }
@@ -278,23 +313,23 @@ export async function exportToDOCX(
     children.push(sectionTitle(headingFor(config, 'extracurricular')));
     if (clubs.length) {
       children.push(new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
+        alignment: alignOf('bullet'),
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: density.bulletBefore, after: density.bulletAfter },
         children: [
-          new TextRun({ text: `${L.clubs} `,                   bold: true, size: density.body, font: FONT }),
-          new TextRun({ text: clubs.map((c) => c.text).join('; '), size: density.body, font: FONT }),
+          new TextRun({ ...runOf('inlineLabel'), text: `${L.clubs} ` }),
+          new TextRun({ ...runOf('bullet'), text: clubs.map((c) => c.text).join('; ') }),
         ],
       }));
     }
     if (interests.length) {
       children.push(new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
+        alignment: alignOf('bullet'),
         numbering: { reference: 'bullets', level: 0 },
         spacing: { before: density.bulletBefore, after: density.bulletAfter },
         children: [
-          new TextRun({ text: `${L.interests} `,                   bold: true, size: density.body, font: FONT }),
-          new TextRun({ text: interests.map((i) => i.text).join('; '), size: density.body, font: FONT }),
+          new TextRun({ ...runOf('inlineLabel'), text: `${L.interests} ` }),
+          new TextRun({ ...runOf('bullet'), text: interests.map((i) => i.text).join('; ') }),
         ],
       }));
     }
@@ -304,7 +339,7 @@ export async function exportToDOCX(
 
   const doc = new Document({
     styles: {
-      default: { document: { run: { font: FONT, size: density.body } } },
+      default: { document: { run: { font: FONT, size: Math.round(basePt * 2) } } },
     },
     numbering: {
       config: [{
@@ -322,7 +357,7 @@ export async function exportToDOCX(
       properties: {
         page: {
           size: pageSize,
-          margin: density.margin,
+          margin: pageMargin,
         },
       },
       children,
